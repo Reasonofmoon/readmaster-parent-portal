@@ -109,6 +109,7 @@ function getDashboardData() {
     latestLeads: getLatestLeads_(leadValues),
     leadsBoard: getLeadsBoard_(leadValues),
     latestPortalViews: getLatestPortalViews_(portalViewValues),
+    followUpQueue: getFollowUpQueue_(leadValues, reportValues, portalViewValues),
     tutorialSteps: getTutorialSteps_(),
     channelGuide: getChannelGuide_(config),
     resolvedPortalBaseUrl: getResolvedPortalBaseUrl_(config),
@@ -360,6 +361,7 @@ function buildStats_(studentValues, reportValues, leadValues, levelTestValues, p
   var leadCount = Math.max(leadValues.length - 1, 0);
   var levelTestCount = Math.max(levelTestValues.length - 1, 0);
   var portalViewCount = Math.max(portalViewValues.length - 1, 0);
+  var followUpCount = getFollowUpQueue_(leadValues, reportValues, portalViewValues).length;
 
   for (var i = 1; i < studentValues.length; i += 1) {
     if (isTruthy_(studentValues[i][0])) {
@@ -379,6 +381,7 @@ function buildStats_(studentValues, reportValues, leadValues, levelTestValues, p
     leadRows: leadCount,
     levelTestRows: levelTestCount,
     portalViewRows: portalViewCount,
+    followUpRows: followUpCount,
     pendingBatchRows: pendingCount,
     sentReports: sentCount
   };
@@ -474,6 +477,101 @@ function getLatestPortalViews_(portalViewValues) {
   return items;
 }
 
+function getFollowUpQueue_(leadValues, reportValues, portalViewValues) {
+  var items = [];
+  var now = new Date().getTime();
+  var reportIndex = {};
+  var viewedTokens = {};
+
+  for (var r = 1; r < reportValues.length; r += 1) {
+    var key = buildLeadMatchKey_(reportValues[r][2], reportValues[r][4]);
+    reportIndex[key] = {
+      portalToken: safeString_(reportValues[r][11], ""),
+      portalUrl: safeString_(reportValues[r][12], ""),
+      deliveryStatus: safeString_(reportValues[r][14], ""),
+      studentName: safeString_(reportValues[r][1], "")
+    };
+  }
+
+  for (var v = 1; v < portalViewValues.length; v += 1) {
+    var token = safeString_(portalViewValues[v][4], "");
+    if (token) {
+      viewedTokens[token] = true;
+    }
+  }
+
+  for (var i = leadValues.length - 1; i > 0; i -= 1) {
+    var row = leadValues[i];
+    var status = normalizeLeadStatus_(row[7]);
+    var createdAt = parseDateMaybe_(row[0]);
+    var bookedAt = parseDateMaybe_(row[10]);
+    var rowIndex = i + 1;
+    var guardianName = safeString_(row[1], "");
+    var phone = safeString_(row[2], "");
+    var matchKey = buildLeadMatchKey_(guardianName, phone);
+    var matchedReport = reportIndex[matchKey];
+
+    if (status === "CONTACTED" && createdAt && now - createdAt.getTime() > 2 * 24 * 60 * 60 * 1000) {
+      items.push(buildFollowUpItem_(rowIndex, row, "상담 후속 필요", "연락 완료 후 2일 이상 다음 액션이 없습니다."));
+      continue;
+    }
+
+    if (status === "TEST_BOOKED" && bookedAt && bookedAt.getTime() < now) {
+      items.push(buildFollowUpItem_(rowIndex, row, "테스트 후속 필요", "예약일이 지났습니다. 테스트 결과 입력 또는 상담 후속이 필요합니다."));
+      continue;
+    }
+
+    if (status === "REPORT_READY" && matchedReport && matchedReport.portalToken && !viewedTokens[matchedReport.portalToken]) {
+      items.push(buildFollowUpItem_(rowIndex, row, "리포트 미열람", "학부모 링크가 아직 열리지 않았습니다. 카카오/전화 후속이 필요합니다."));
+      continue;
+    }
+
+    if (status === "NEW" && !safeString_(row[12], "")) {
+      items.push(buildFollowUpItem_(rowIndex, row, "담당자 미지정", "신규 리드에 담당자가 지정되지 않았습니다."));
+    }
+  }
+
+  return items.slice(0, 8);
+}
+
+function buildFollowUpItem_(rowIndex, row, title, reason) {
+  return {
+    rowIndex: rowIndex,
+    title: title,
+    reason: reason,
+    guardianName: safeString_(row[1], ""),
+    phone: safeString_(row[2], ""),
+    grade: safeString_(row[3], ""),
+    session: safeString_(row[4], ""),
+    campusName: safeString_(row[5], ""),
+    status: normalizeLeadStatus_(row[7]),
+    nextAction: safeString_(row[11], ""),
+    owner: safeString_(row[12], "")
+  };
+}
+
+function buildLeadMatchKey_(guardianName, phone) {
+  return safeString_(guardianName, "").trim() + "|" + safeString_(phone, "").replace(/\D/g, "");
+}
+
+function parseDateMaybe_(value) {
+  if (value instanceof Date) {
+    return value;
+  }
+
+  var text = safeString_(value, "");
+  if (!text) {
+    return null;
+  }
+
+  var normalized = text.replace(/\./g, "-").replace(" ", "T");
+  var date = new Date(normalized);
+  if (isNaN(date.getTime())) {
+    return null;
+  }
+  return date;
+}
+
 function getTutorialSteps_() {
   return [
     {
@@ -507,6 +605,10 @@ function getTutorialSteps_() {
     {
       title: "8. CRM 보드 운영",
       body: "Leads 데이터를 상태별 보드로 보고, 연락 완료·테스트 예약·등록 완료 상태를 사이드바에서 바로 변경합니다."
+    },
+    {
+      title: "9. 후속조치 큐 확인",
+      body: "연락 후 방치된 리드, 테스트 예약일이 지난 리드, 리포트를 아직 안 본 학부모를 자동으로 찾아 개요 화면에 우선 표시합니다."
     }
   ];
 }

@@ -364,6 +364,11 @@
         </div>
 
         <div class="panel">
+          <h2>후속조치 큐</h2>
+          <div id="followUpQueue"></div>
+        </div>
+
+        <div class="panel">
           <h2>최근 학부모 링크 열람</h2>
           <div id="latestPortalViews"></div>
         </div>
@@ -612,6 +617,7 @@
           renderStat("신규 리드", data.stats.leadRows),
           renderStat("레벨테스트", data.stats.levelTestRows),
           renderStat("링크 열람", data.stats.portalViewRows),
+          renderStat("후속조치", data.stats.followUpRows),
           renderStat("일괄 대기", data.stats.pendingBatchRows),
           renderStat("전달 완료", data.stats.sentReports)
         ].join("");
@@ -622,6 +628,7 @@
         document.getElementById("integrationGuide").textContent = renderIntegrationGuide(data.integrationGuide);
         document.getElementById("latestReports").innerHTML = renderLatestReports(data.latestReports);
         document.getElementById("latestLeads").innerHTML = renderLatestLeads(data.latestLeads);
+        document.getElementById("followUpQueue").innerHTML = renderFollowUpQueue(data.followUpQueue);
         document.getElementById("crmBoard").innerHTML = renderLeadsBoard(data.leadsBoard);
         document.getElementById("latestPortalViews").innerHTML = renderLatestPortalViews(data.latestPortalViews);
         document.getElementById("tutorialSteps").innerHTML = renderTutorialSteps(data.tutorialSteps);
@@ -713,6 +720,24 @@
             '<div><strong>' + (item.studentName || "학생명 없음") + '</strong> · ' + (item.guardianName || "") + '</div>' +
             '<div class="note">' + (item.campusName || "") + ' / ' + (item.viewedAt || "") + "</div>" +
             "</div>"
+          );
+        }).join("");
+      }
+
+      function renderFollowUpQueue(items) {
+        if (!items || items.length === 0) {
+          return '<div class="note">지금 바로 후속조치가 필요한 리드가 없습니다.</div>';
+        }
+
+        return items.map(function (item) {
+          return (
+            '<div class="latest-item">' +
+            '<div><strong>' + escapeHtml(item.title || "후속조치") + '</strong> · ' + escapeHtml(item.guardianName || "") + '</div>' +
+            '<div class="note">' + escapeHtml(item.reason || "") + '</div>' +
+            '<div class="note">' + escapeHtml(item.campusName || "") + ' / ' + escapeHtml(item.session || "일정 미정") + '</div>' +
+            '<div class="note">다음 액션: ' + escapeHtml(item.nextAction || "미정") + ' / 담당: ' + escapeHtml(item.owner || "미지정") + '</div>' +
+            '<div style="margin-top:8px"><button class="secondary tiny" onclick="selectLeadRow(' + item.rowIndex + '); activateTab(\'crm\');">CRM에서 열기</button></div>' +
+            '</div>'
           );
         }).join("");
       }
