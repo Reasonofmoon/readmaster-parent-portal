@@ -110,6 +110,7 @@ function getDashboardData() {
     leadsBoard: getLeadsBoard_(leadValues),
     latestPortalViews: getLatestPortalViews_(portalViewValues),
     followUpQueue: getFollowUpQueue_(leadValues, reportValues, portalViewValues),
+    callList: getCallList_(leadValues, reportValues, portalViewValues),
     tutorialSteps: getTutorialSteps_(),
     channelGuide: getChannelGuide_(config),
     resolvedPortalBaseUrl: getResolvedPortalBaseUrl_(config),
@@ -264,6 +265,68 @@ function updateLeadStatus(input) {
   return {
     rowIndex: rowIndex,
     status: nextStatus
+  };
+}
+
+function generateFollowUpDraft(input) {
+  var rowIndex = Number(input.rowIndex || 0);
+  var leadRow = getLeadRowByIndex_(rowIndex);
+  var reportMatch = findReportForLead_(leadRow);
+  var config = getAppConfig_();
+  var status = normalizeLeadStatus_(leadRow[7]);
+  var guardianName = safeString_(leadRow[1], "");
+  var campusName = safeString_(leadRow[5], config.campusName);
+  var session = safeString_(leadRow[4], "");
+  var bookingUrl = safeString_(config.bookingPageUrl, "");
+  var portalUrl = reportMatch ? safeString_(reportMatch.portalUrl, "") : "";
+  var title = "후속 안내";
+  var body = "";
+
+  if (status === "REPORT_READY") {
+    title = "리포트 확인 안내";
+    body = [
+      guardianName + "님 안녕하세요.",
+      campusName + "입니다.",
+      "자녀 학습 리포트가 준비되어 안내드립니다.",
+      portalUrl ? "리포트 확인 링크: " + portalUrl : "리포트 링크는 원장님이 별도로 전달드립니다.",
+      bookingUrl ? "상담 예약: " + bookingUrl : "",
+      "확인 후 궁금한 점은 편하게 회신 주세요."
+    ].filter(Boolean).join("\n");
+  } else if (status === "TEST_BOOKED") {
+    title = "레벨테스트 후속 안내";
+    body = [
+      guardianName + "님 안녕하세요.",
+      campusName + "입니다.",
+      "예약하신 레벨테스트 일정 확인차 연락드립니다.",
+      session ? "현재 기록된 일정: " + session : "",
+      bookingUrl ? "일정 변경/상담 예약: " + bookingUrl : "",
+      "가능한 시간 회신 주시면 빠르게 도와드리겠습니다."
+    ].filter(Boolean).join("\n");
+  } else if (status === "CONTACTED") {
+    title = "상담 후속 안내";
+    body = [
+      guardianName + "님 안녕하세요.",
+      campusName + "입니다.",
+      "지난 상담 후 후속 안내 드립니다.",
+      bookingUrl ? "상담/테스트 일정 예약: " + bookingUrl : "",
+      "원하시는 시간 알려주시면 바로 도와드리겠습니다."
+    ].filter(Boolean).join("\n");
+  } else {
+    title = "설명회 후속 안내";
+    body = [
+      guardianName + "님 안녕하세요.",
+      campusName + "입니다.",
+      "설명회/문의 접수 확인되어 안내드립니다.",
+      session ? "희망 일정: " + session : "",
+      bookingUrl ? "상담 예약 링크: " + bookingUrl : "",
+      "가능한 시간 확인 후 연락드리겠습니다."
+    ].filter(Boolean).join("\n");
+  }
+
+  return {
+    rowIndex: rowIndex,
+    title: title,
+    text: body
   };
 }
 
@@ -534,6 +597,21 @@ function getFollowUpQueue_(leadValues, reportValues, portalViewValues) {
   return items.slice(0, 8);
 }
 
+function getCallList_(leadValues, reportValues, portalViewValues) {
+  return getFollowUpQueue_(leadValues, reportValues, portalViewValues).map(function (item, index) {
+    return {
+      priority: index + 1,
+      rowIndex: item.rowIndex,
+      guardianName: item.guardianName,
+      phone: item.phone,
+      campusName: item.campusName,
+      title: item.title,
+      nextAction: item.nextAction,
+      owner: item.owner
+    };
+  });
+}
+
 function buildFollowUpItem_(rowIndex, row, title, reason) {
   return {
     rowIndex: rowIndex,
@@ -552,6 +630,32 @@ function buildFollowUpItem_(rowIndex, row, title, reason) {
 
 function buildLeadMatchKey_(guardianName, phone) {
   return safeString_(guardianName, "").trim() + "|" + safeString_(phone, "").replace(/\D/g, "");
+}
+
+function findReportForLead_(leadRow) {
+  var reportValues = ensureReportsSheet_().getDataRange().getValues();
+  var key = buildLeadMatchKey_(leadRow[1], leadRow[2]);
+
+  for (var i = reportValues.length - 1; i > 0; i -= 1) {
+    if (buildLeadMatchKey_(reportValues[i][2], reportValues[i][4]) === key) {
+      return {
+        studentName: safeString_(reportValues[i][1], ""),
+        portalToken: safeString_(reportValues[i][11], ""),
+        portalUrl: safeString_(reportValues[i][12], ""),
+        deliveryStatus: safeString_(reportValues[i][14], "")
+      };
+    }
+  }
+
+  return null;
+}
+
+function getLeadRowByIndex_(rowIndex) {
+  var sheet = ensureLeadsSheet_();
+  if (!rowIndex || rowIndex < 2 || rowIndex > sheet.getLastRow()) {
+    throw new Error("선택한 리드를 찾지 못했습니다.");
+  }
+  return sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
 }
 
 function parseDateMaybe_(value) {

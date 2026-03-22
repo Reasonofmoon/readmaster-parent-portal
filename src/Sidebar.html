@@ -369,6 +369,25 @@
         </div>
 
         <div class="panel">
+          <h2>오늘의 콜 리스트</h2>
+          <div id="callList"></div>
+        </div>
+
+        <div class="panel">
+          <h2>후속 메시지 초안</h2>
+          <label>선택된 리드</label>
+          <input id="draftTarget" readonly />
+          <label>초안 제목</label>
+          <input id="draftTitle" readonly />
+          <label>메시지 초안</label>
+          <textarea id="draftBody" style="min-height: 140px;"></textarea>
+          <div class="actions">
+            <button class="secondary" onclick="copyDraft()">초안 복사</button>
+            <button class="ghost" onclick="activateTab('crm')">CRM 보기</button>
+          </div>
+        </div>
+
+        <div class="panel">
           <h2>최근 학부모 링크 열람</h2>
           <div id="latestPortalViews"></div>
         </div>
@@ -629,6 +648,7 @@
         document.getElementById("latestReports").innerHTML = renderLatestReports(data.latestReports);
         document.getElementById("latestLeads").innerHTML = renderLatestLeads(data.latestLeads);
         document.getElementById("followUpQueue").innerHTML = renderFollowUpQueue(data.followUpQueue);
+        document.getElementById("callList").innerHTML = renderCallList(data.callList);
         document.getElementById("crmBoard").innerHTML = renderLeadsBoard(data.leadsBoard);
         document.getElementById("latestPortalViews").innerHTML = renderLatestPortalViews(data.latestPortalViews);
         document.getElementById("tutorialSteps").innerHTML = renderTutorialSteps(data.tutorialSteps);
@@ -736,7 +756,30 @@
             '<div class="note">' + escapeHtml(item.reason || "") + '</div>' +
             '<div class="note">' + escapeHtml(item.campusName || "") + ' / ' + escapeHtml(item.session || "일정 미정") + '</div>' +
             '<div class="note">다음 액션: ' + escapeHtml(item.nextAction || "미정") + ' / 담당: ' + escapeHtml(item.owner || "미지정") + '</div>' +
-            '<div style="margin-top:8px"><button class="secondary tiny" onclick="selectLeadRow(' + item.rowIndex + '); activateTab(\'crm\');">CRM에서 열기</button></div>' +
+            '<div style="margin-top:8px" class="crm-actions">' +
+            '<button class="secondary tiny" onclick="selectLeadRow(' + item.rowIndex + '); activateTab(\'crm\');">CRM에서 열기</button>' +
+            '<button class="ghost tiny" onclick="loadDraft(' + item.rowIndex + ', \'' + escapeJs(item.guardianName || "") + '\')">초안 불러오기</button>' +
+            '</div>' +
+            '</div>'
+          );
+        }).join("");
+      }
+
+      function renderCallList(items) {
+        if (!items || items.length === 0) {
+          return '<div class="note">오늘 우선 연락할 대상이 없습니다.</div>';
+        }
+
+        return items.map(function (item) {
+          return (
+            '<div class="latest-item">' +
+            '<div><strong>#' + item.priority + '</strong> ' + escapeHtml(item.guardianName || "") + ' · ' + escapeHtml(item.phone || "") + '</div>' +
+            '<div class="note">' + escapeHtml(item.title || "") + ' / ' + escapeHtml(item.campusName || "") + '</div>' +
+            '<div class="note">다음 액션: ' + escapeHtml(item.nextAction || "미정") + ' / 담당: ' + escapeHtml(item.owner || "미지정") + '</div>' +
+            '<div style="margin-top:8px" class="crm-actions">' +
+            '<button class="secondary tiny" onclick="loadDraft(' + item.rowIndex + ', \'' + escapeJs(item.guardianName || "") + '\')">메시지 초안</button>' +
+            '<button class="ghost tiny" onclick="selectLeadRow(' + item.rowIndex + '); activateTab(\'crm\');">상세 편집</button>' +
+            '</div>' +
             '</div>'
           );
         }).join("");
@@ -830,6 +873,10 @@
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;")
           .replace(/'/g, "&#39;");
+      }
+
+      function escapeJs(value) {
+        return String(value || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
       }
 
       function renderIntegrationGuide(guide) {
@@ -947,6 +994,39 @@
           return;
         }
         fillLeadFormByRow(rowIndex);
+      }
+
+      function loadDraft(rowIndex, guardianName) {
+        setStatus("후속 메시지 초안을 준비하는 중입니다.");
+        google.script.run
+          .withSuccessHandler(function (result) {
+            document.getElementById("draftTarget").value = guardianName || "";
+            document.getElementById("draftTitle").value = result.title || "";
+            document.getElementById("draftBody").value = result.text || "";
+            setStatus("메시지 초안을 불러왔습니다.");
+          })
+          .withFailureHandler(function (error) {
+            setStatus("오류: " + error.message, true);
+          })
+          .generateFollowUpDraft({
+            rowIndex: rowIndex
+          });
+      }
+
+      function copyDraft() {
+        var body = document.getElementById("draftBody").value || "";
+        if (!body) {
+          setStatus("복사할 초안이 없습니다.", true);
+          return;
+        }
+
+        navigator.clipboard.writeText(body)
+          .then(function () {
+            setStatus("메시지 초안을 클립보드에 복사했습니다.");
+          })
+          .catch(function () {
+            setStatus("브라우저 복사에 실패했습니다. 직접 선택해 복사해 주세요.", true);
+          });
       }
 
       function initializeWorkspace() {
