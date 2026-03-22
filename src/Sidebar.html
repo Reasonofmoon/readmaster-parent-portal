@@ -63,7 +63,7 @@
 
       .tabs {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 6px;
         margin-bottom: 12px;
       }
@@ -249,6 +249,67 @@
         background: #0f172a;
         color: #dbeafe;
       }
+
+      .crm-board {
+        display: grid;
+        gap: 10px;
+      }
+
+      .crm-column {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #fbfdff;
+        padding: 12px;
+      }
+
+      .crm-column-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .crm-column-title {
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .crm-count {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .crm-card {
+        border: 1px solid #e6eef9;
+        border-radius: 14px;
+        padding: 10px;
+        background: white;
+        margin-top: 8px;
+      }
+
+      .crm-card-title {
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .crm-meta {
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.5;
+        margin-top: 4px;
+      }
+
+      .crm-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .tiny {
+        font-size: 11px;
+        padding: 8px 10px;
+      }
     </style>
   </head>
   <body>
@@ -262,6 +323,7 @@
         <button class="tab active" data-tab="overview" onclick="activateTab('overview')">개요</button>
         <button class="tab" data-tab="settings" onclick="activateTab('settings')">설정</button>
         <button class="tab" data-tab="generate" onclick="activateTab('generate')">생성</button>
+        <button class="tab" data-tab="crm" onclick="activateTab('crm')">CRM</button>
         <button class="tab" data-tab="guide" onclick="activateTab('guide')">가이드</button>
       </div>
 
@@ -420,6 +482,14 @@
         </div>
       </div>
 
+      <div id="tab-crm" class="tab-panel">
+        <div class="panel">
+          <h2>입학 상담 CRM 보드</h2>
+          <div class="note">설명회 예약, 상담 요청, 테스트 예약, 리포트 전달, 등록 완료까지를 상태별로 관리합니다.</div>
+        </div>
+        <div id="crmBoard" class="crm-board"></div>
+      </div>
+
       <div id="tab-guide" class="tab-panel">
         <div class="panel">
           <h2>원장 빠른 시작</h2>
@@ -522,6 +592,7 @@
         document.getElementById("integrationGuide").textContent = renderIntegrationGuide(data.integrationGuide);
         document.getElementById("latestReports").innerHTML = renderLatestReports(data.latestReports);
         document.getElementById("latestLeads").innerHTML = renderLatestLeads(data.latestLeads);
+        document.getElementById("crmBoard").innerHTML = renderLeadsBoard(data.leadsBoard);
         document.getElementById("latestPortalViews").innerHTML = renderLatestPortalViews(data.latestPortalViews);
         document.getElementById("tutorialSteps").innerHTML = renderTutorialSteps(data.tutorialSteps);
 
@@ -545,6 +616,7 @@
         document.getElementById("singleCampusName").value = data.config.campusName || "";
         document.getElementById("leadCampusName").value = data.config.campusName || "";
         window.latestLeadCache = data.latestLeads || [];
+        window.leadsBoardCache = flattenLeadsBoard(data.leadsBoard || {});
       }
 
       function renderStat(label, value) {
@@ -614,6 +686,93 @@
         }).join("");
       }
 
+      function renderLeadsBoard(board) {
+        var columns = [
+          { key: "NEW", title: "신규 문의" },
+          { key: "CONTACTED", title: "연락 완료" },
+          { key: "TEST_BOOKED", title: "테스트 예약" },
+          { key: "REPORT_READY", title: "리포트 전달" },
+          { key: "ENROLLED", title: "등록 완료" }
+        ];
+
+        return columns.map(function (column) {
+          var items = (board && board[column.key]) || [];
+          return (
+            '<div class="crm-column">' +
+            '<div class="crm-column-head">' +
+            '<div class="crm-column-title">' + column.title + '</div>' +
+            '<div class="crm-count">' + items.length + '건</div>' +
+            '</div>' +
+            renderLeadCards(items) +
+            '</div>'
+          );
+        }).join("");
+      }
+
+      function renderLeadCards(items) {
+        if (!items.length) {
+          return '<div class="note">이 상태의 리드가 없습니다.</div>';
+        }
+
+        return items.map(function (item) {
+          var nextStatus = getNextLeadStatus(item.status);
+          return (
+            '<div class="crm-card">' +
+            '<div class="crm-card-title">' + escapeHtml(item.guardianName || "이름 없음") + '</div>' +
+            '<div class="crm-meta">' +
+            escapeHtml(item.phone || "") + '<br/>' +
+            escapeHtml(item.grade || "") + ' / ' + escapeHtml(item.campusName || "") + '<br/>' +
+            escapeHtml(item.session || "일정 미정") +
+            '</div>' +
+            '<div style="margin-top:6px"><span class="badge">' + escapeHtml(item.status || "NEW") + '</span></div>' +
+            '<div class="crm-actions">' +
+            (nextStatus ? '<button class="secondary tiny" onclick="advanceLeadStatus(' + item.rowIndex + ', \'' + nextStatus + '\')">다음: ' + leadStatusLabel(nextStatus) + '</button>' : '<button class="ghost tiny" disabled>완료</button>') +
+            '<button class="ghost tiny" onclick="fillLeadFormByRow(' + item.rowIndex + ')">학생 전환</button>' +
+            '</div>' +
+            '</div>'
+          );
+        }).join("");
+      }
+
+      function flattenLeadsBoard(board) {
+        var map = {};
+        Object.keys(board || {}).forEach(function (key) {
+          (board[key] || []).forEach(function (item) {
+            map[item.rowIndex] = item;
+          });
+        });
+        return map;
+      }
+
+      function getNextLeadStatus(status) {
+        var order = {
+          NEW: "CONTACTED",
+          CONTACTED: "TEST_BOOKED",
+          TEST_BOOKED: "REPORT_READY",
+          REPORT_READY: "ENROLLED"
+        };
+        return order[status] || "";
+      }
+
+      function leadStatusLabel(status) {
+        var labels = {
+          CONTACTED: "연락 완료",
+          TEST_BOOKED: "테스트 예약",
+          REPORT_READY: "리포트 전달",
+          ENROLLED: "등록 완료"
+        };
+        return labels[status] || status;
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
       function renderIntegrationGuide(guide) {
         if (!guide || !guide.intakePostUrl) {
           return "웹앱을 먼저 배포하면 여기에서 설명회 퍼널 POST URL과 intake-guide URL을 확인할 수 있습니다.";
@@ -653,6 +812,24 @@
         document.getElementById("leadTeacherName").value = "배정 예정";
         document.getElementById("leadNote").value = (lead.session || "") + " / 설명회 리드";
         setStatus("최근 리드를 전환 폼에 채웠습니다.");
+      }
+
+      function fillLeadFormByRow(rowIndex) {
+        var item = (window.leadsBoardCache || {})[rowIndex];
+        if (!item) {
+          setStatus("선택한 리드를 찾지 못했습니다.", true);
+          return;
+        }
+
+        activateTab('generate');
+        document.getElementById("leadGuardianName").value = item.guardianName || "";
+        document.getElementById("leadGuardianPhone").value = item.phone || "";
+        document.getElementById("leadGrade").value = item.grade || "";
+        document.getElementById("leadCampusName").value = item.campusName || document.getElementById("campusName").value || "";
+        document.getElementById("leadClassName").value = "레벨테스트 대기";
+        document.getElementById("leadTeacherName").value = "배정 예정";
+        document.getElementById("leadNote").value = (item.session || "") + " / " + (item.source || "리드");
+        setStatus("선택한 리드를 학생 전환 폼에 채웠습니다.");
       }
 
       function initializeWorkspace() {
@@ -721,6 +898,22 @@
             setStatus("오류: " + error.message, true);
           })
           .promoteLeadToStudent(getLeadPromotionPayload());
+      }
+
+      function advanceLeadStatus(rowIndex, nextStatus) {
+        setStatus("리드 상태를 변경하는 중입니다.");
+        google.script.run
+          .withSuccessHandler(function () {
+            setStatus("리드 상태를 " + leadStatusLabel(nextStatus) + "로 변경했습니다.");
+            loadDashboard();
+          })
+          .withFailureHandler(function (error) {
+            setStatus("오류: " + error.message, true);
+          })
+          .updateLeadStatus({
+            rowIndex: rowIndex,
+            status: nextStatus
+          });
       }
 
       function openTutorial() {

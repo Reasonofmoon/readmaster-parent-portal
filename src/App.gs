@@ -107,6 +107,7 @@ function getDashboardData() {
     stats: buildStats_(studentValues, reportValues, leadValues, levelTestValues, portalViewValues),
     latestReports: getLatestReports_(reportValues),
     latestLeads: getLatestLeads_(leadValues),
+    leadsBoard: getLeadsBoard_(leadValues),
     latestPortalViews: getLatestPortalViews_(portalViewValues),
     tutorialSteps: getTutorialSteps_(),
     channelGuide: getChannelGuide_(config),
@@ -219,6 +220,34 @@ function promoteLeadToStudent(input) {
     guardianName: guardianName,
     campusName: campusName,
     className: className
+  };
+}
+
+function updateLeadStatus(input) {
+  var rowIndex = Number(input.rowIndex || 0);
+  var nextStatus = normalizeLeadStatus_(safeString_(input.status, "NEW"));
+  var note = safeString_(input.note, "");
+  var sheet = ensureLeadsSheet_();
+
+  if (!rowIndex || rowIndex < 2) {
+    throw new Error("유효한 리드 행을 찾지 못했습니다.");
+  }
+
+  sheet.getRange(rowIndex, 8).setValue(nextStatus);
+
+  if (nextStatus === "ENROLLED" || nextStatus === "PROMOTED") {
+    sheet.getRange(rowIndex, 9).setValue("Y");
+  }
+
+  if (note) {
+    var currentMemo = safeString_(sheet.getRange(rowIndex, 10).getValue(), "");
+    var stampedNote = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd HH:mm") + " " + note;
+    sheet.getRange(rowIndex, 10).setValue(currentMemo ? currentMemo + " | " + stampedNote : stampedNote);
+  }
+
+  return {
+    rowIndex: rowIndex,
+    status: nextStatus
   };
 }
 
@@ -376,6 +405,39 @@ function getLatestLeads_(leadValues) {
   return items;
 }
 
+function getLeadsBoard_(leadValues) {
+  var columns = {
+    NEW: [],
+    CONTACTED: [],
+    TEST_BOOKED: [],
+    REPORT_READY: [],
+    ENROLLED: []
+  };
+
+  for (var i = leadValues.length - 1; i > 0; i -= 1) {
+    var status = normalizeLeadStatus_(leadValues[i][7]);
+    if (!columns[status]) {
+      status = "NEW";
+    }
+
+    columns[status].push({
+      rowIndex: i + 1,
+      createdAt: leadValues[i][0],
+      guardianName: leadValues[i][1],
+      phone: leadValues[i][2],
+      grade: leadValues[i][3],
+      session: leadValues[i][4],
+      campusName: leadValues[i][5],
+      source: leadValues[i][6],
+      status: status,
+      converted: leadValues[i][8],
+      memo: leadValues[i][9]
+    });
+  }
+
+  return columns;
+}
+
 function getLatestPortalViews_(portalViewValues) {
   var items = [];
 
@@ -421,6 +483,10 @@ function getTutorialSteps_() {
     {
       title: "7. 리드 학생 전환",
       body: "설명회 리드가 상담으로 이어지면 대시보드에서 Students 시트 행으로 바로 전환할 수 있습니다."
+    },
+    {
+      title: "8. CRM 보드 운영",
+      body: "Leads 데이터를 상태별 보드로 보고, 연락 완료·테스트 예약·등록 완료 상태를 사이드바에서 바로 변경합니다."
     }
   ];
 }
@@ -973,6 +1039,26 @@ function createLeadFromSubmission_(input) {
     campusName: campusName,
     intakeMode: safeString_(input._intakeMode, "json")
   };
+}
+
+function normalizeLeadStatus_(status) {
+  var value = safeString_(status, "NEW").toUpperCase();
+
+  if (value === "PROMOTED") {
+    return "ENROLLED";
+  }
+
+  if (
+    value === "NEW" ||
+    value === "CONTACTED" ||
+    value === "TEST_BOOKED" ||
+    value === "REPORT_READY" ||
+    value === "ENROLLED"
+  ) {
+    return value;
+  }
+
+  return "NEW";
 }
 
 function buildCompositeScore_(readingScore, vocabularyScore, speakingScore) {
