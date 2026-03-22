@@ -488,6 +488,36 @@
           <div class="note">설명회 예약, 상담 요청, 테스트 예약, 리포트 전달, 등록 완료까지를 상태별로 관리합니다.</div>
         </div>
         <div id="crmBoard" class="crm-board"></div>
+        <div class="panel">
+          <h2>선택 리드 상세 편집</h2>
+          <div class="note">CRM 카드에서 `상세 편집`을 누르면 이 폼에 채워집니다.</div>
+          <label>선택된 행 번호</label>
+          <input id="crmRowIndex" readonly />
+          <label>보호자 이름</label>
+          <input id="crmGuardianName" readonly />
+          <label>연락처</label>
+          <input id="crmPhone" readonly />
+          <label>상태</label>
+          <select id="crmStatus">
+            <option value="NEW">신규 문의</option>
+            <option value="CONTACTED">연락 완료</option>
+            <option value="TEST_BOOKED">테스트 예약</option>
+            <option value="REPORT_READY">리포트 전달</option>
+            <option value="ENROLLED">등록 완료</option>
+          </select>
+          <label>상담/테스트 예약일</label>
+          <input id="crmBookedAt" placeholder="예: 2026-03-24 15:00" />
+          <label>다음 액션</label>
+          <input id="crmNextAction" placeholder="예: 테스트 결과 안내 전화" />
+          <label>담당자</label>
+          <input id="crmOwner" placeholder="예: 원장 / 실장 / 강사명" />
+          <label>추가 메모</label>
+          <textarea id="crmNote" placeholder="상담 내용, 학부모 반응, 후속 조치 메모"></textarea>
+          <div class="actions">
+            <button class="secondary" onclick="saveLeadDetails()">CRM 저장</button>
+            <button class="ghost" onclick="fillLeadFormFromCrm()">학생 전환 폼으로 보내기</button>
+          </div>
+        </div>
       </div>
 
       <div id="tab-guide" class="tab-panel">
@@ -665,6 +695,7 @@
             '<div class="latest-item">' +
             '<div><strong>' + (item.guardianName || "이름 없음") + '</strong> · ' + (item.phone || "") + '</div>' +
             '<div class="note">' + (item.campusName || "") + ' / ' + (item.session || "일정 미정") + "</div>" +
+            '<div class="note">' + (item.nextAction || "다음 액션 미정") + ' / ' + (item.owner || "담당자 미지정") + "</div>" +
             '<div style="margin-top:6px"><span class="badge">' + (item.status || "NEW") + "</span></div>" +
             "</div>"
           );
@@ -722,12 +753,15 @@
             '<div class="crm-meta">' +
             escapeHtml(item.phone || "") + '<br/>' +
             escapeHtml(item.grade || "") + ' / ' + escapeHtml(item.campusName || "") + '<br/>' +
-            escapeHtml(item.session || "일정 미정") +
+            escapeHtml(item.session || "일정 미정") + '<br/>' +
+            '예약일: ' + escapeHtml(item.bookedAt || "미정") + '<br/>' +
+            '다음: ' + escapeHtml(item.nextAction || "미정") + '<br/>' +
+            '담당: ' + escapeHtml(item.owner || "미지정") +
             '</div>' +
             '<div style="margin-top:6px"><span class="badge">' + escapeHtml(item.status || "NEW") + '</span></div>' +
             '<div class="crm-actions">' +
             (nextStatus ? '<button class="secondary tiny" onclick="advanceLeadStatus(' + item.rowIndex + ', \'' + nextStatus + '\')">다음: ' + leadStatusLabel(nextStatus) + '</button>' : '<button class="ghost tiny" disabled>완료</button>') +
-            '<button class="ghost tiny" onclick="fillLeadFormByRow(' + item.rowIndex + ')">학생 전환</button>' +
+            '<button class="ghost tiny" onclick="selectLeadRow(' + item.rowIndex + ')">상세 편집</button>' +
             '</div>' +
             '</div>'
           );
@@ -830,6 +864,64 @@
         document.getElementById("leadTeacherName").value = "배정 예정";
         document.getElementById("leadNote").value = (item.session || "") + " / " + (item.source || "리드");
         setStatus("선택한 리드를 학생 전환 폼에 채웠습니다.");
+      }
+
+      function selectLeadRow(rowIndex) {
+        var item = (window.leadsBoardCache || {})[rowIndex];
+        if (!item) {
+          setStatus("선택한 리드를 찾지 못했습니다.", true);
+          return;
+        }
+
+        activateTab('crm');
+        document.getElementById("crmRowIndex").value = item.rowIndex || "";
+        document.getElementById("crmGuardianName").value = item.guardianName || "";
+        document.getElementById("crmPhone").value = item.phone || "";
+        document.getElementById("crmStatus").value = item.status || "NEW";
+        document.getElementById("crmBookedAt").value = item.bookedAt || "";
+        document.getElementById("crmNextAction").value = item.nextAction || "";
+        document.getElementById("crmOwner").value = item.owner || "";
+        document.getElementById("crmNote").value = "";
+        setStatus("리드 상세 편집 폼에 불러왔습니다.");
+      }
+
+      function getCrmPayload() {
+        return {
+          rowIndex: document.getElementById("crmRowIndex").value,
+          status: document.getElementById("crmStatus").value,
+          bookedAt: document.getElementById("crmBookedAt").value,
+          nextAction: document.getElementById("crmNextAction").value,
+          owner: document.getElementById("crmOwner").value,
+          note: document.getElementById("crmNote").value
+        };
+      }
+
+      function saveLeadDetails() {
+        var rowIndex = document.getElementById("crmRowIndex").value;
+        if (!rowIndex) {
+          setStatus("먼저 CRM 카드에서 리드를 선택해 주세요.", true);
+          return;
+        }
+
+        setStatus("CRM 정보를 저장하는 중입니다.");
+        google.script.run
+          .withSuccessHandler(function () {
+            setStatus("리드 CRM 정보가 저장되었습니다.");
+            loadDashboard();
+          })
+          .withFailureHandler(function (error) {
+            setStatus("오류: " + error.message, true);
+          })
+          .updateLeadStatus(getCrmPayload());
+      }
+
+      function fillLeadFormFromCrm() {
+        var rowIndex = Number(document.getElementById("crmRowIndex").value || 0);
+        if (!rowIndex) {
+          setStatus("먼저 CRM 카드에서 리드를 선택해 주세요.", true);
+          return;
+        }
+        fillLeadFormByRow(rowIndex);
       }
 
       function initializeWorkspace() {

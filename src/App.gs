@@ -227,6 +227,9 @@ function updateLeadStatus(input) {
   var rowIndex = Number(input.rowIndex || 0);
   var nextStatus = normalizeLeadStatus_(safeString_(input.status, "NEW"));
   var note = safeString_(input.note, "");
+  var bookedAt = safeString_(input.bookedAt, "");
+  var nextAction = safeString_(input.nextAction, "");
+  var owner = safeString_(input.owner, "");
   var sheet = ensureLeadsSheet_();
 
   if (!rowIndex || rowIndex < 2) {
@@ -243,6 +246,18 @@ function updateLeadStatus(input) {
     var currentMemo = safeString_(sheet.getRange(rowIndex, 10).getValue(), "");
     var stampedNote = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd HH:mm") + " " + note;
     sheet.getRange(rowIndex, 10).setValue(currentMemo ? currentMemo + " | " + stampedNote : stampedNote);
+  }
+
+  if (bookedAt) {
+    sheet.getRange(rowIndex, 11).setValue(bookedAt);
+  }
+
+  if (nextAction) {
+    sheet.getRange(rowIndex, 12).setValue(nextAction);
+  }
+
+  if (owner) {
+    sheet.getRange(rowIndex, 13).setValue(owner);
   }
 
   return {
@@ -398,7 +413,9 @@ function getLatestLeads_(leadValues) {
       grade: leadValues[i][3],
       session: leadValues[i][4],
       campusName: leadValues[i][5],
-      status: leadValues[i][7]
+      status: leadValues[i][7],
+      nextAction: leadValues[i][11],
+      owner: leadValues[i][12]
     });
   }
 
@@ -431,7 +448,10 @@ function getLeadsBoard_(leadValues) {
       source: leadValues[i][6],
       status: status,
       converted: leadValues[i][8],
-      memo: leadValues[i][9]
+      memo: leadValues[i][9],
+      bookedAt: leadValues[i][10],
+      nextAction: leadValues[i][11],
+      owner: leadValues[i][12]
     });
   }
 
@@ -727,7 +747,10 @@ function ensureLeadsSheet_() {
     "Source",
     "Status",
     "Converted To Student",
-    "Memo"
+    "Memo",
+    "Booked At",
+    "Next Action",
+    "Owner"
   ]];
 
   if (!sheet) {
@@ -735,7 +758,7 @@ function ensureLeadsSheet_() {
   }
 
   if (sheet.getLastRow() === 0) {
-    sheet.getRange(1, 1, 3, 10).setValues([
+    sheet.getRange(1, 1, 3, 13).setValues([
       headers[0],
       [
         new Date(),
@@ -747,7 +770,10 @@ function ensureLeadsSheet_() {
         "설명회 퍼널",
         "NEW",
         "N",
-        "설명회 예약 리드"
+        "설명회 예약 리드",
+        "",
+        "설명회 참석 확인",
+        "원장"
       ],
       [
         new Date(),
@@ -759,15 +785,18 @@ function ensureLeadsSheet_() {
         "상담 예약 페이지",
         "CONTACTED",
         "N",
-        "상담 후 레벨테스트 권유 예정"
+        "상담 후 레벨테스트 권유 예정",
+        "2026-03-24 15:00",
+        "레벨테스트 일정 확정",
+        "실장"
       ]
     ]);
     sheet.setFrozenRows(1);
-    sheet.autoResizeColumns(1, 10);
+    sheet.autoResizeColumns(1, 13);
   } else {
     var currentHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     if (currentHeaders.join("|") !== headers[0].join("|")) {
-      sheet.getRange(1, 1, 1, 10).setValues(headers);
+      sheet.getRange(1, 1, 1, 13).setValues(headers);
     }
   }
 
@@ -1031,7 +1060,10 @@ function createLeadFromSubmission_(input) {
     source,
     "NEW",
     "N",
-    memoParts.length ? memoParts.join(" | ") : id
+    memoParts.length ? memoParts.join(" | ") : id,
+    "",
+    "1차 연락",
+    "미지정"
   ]);
 
   return {
