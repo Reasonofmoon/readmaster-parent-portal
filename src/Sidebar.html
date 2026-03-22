@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --line: #dbe4f0;
+        --text: #162033;
+        --muted: #5d6880;
+        --brand: #0f5dff;
+        --brand-soft: #eaf1ff;
+        --good: #0f8c4d;
+        --warn: #a66400;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        color: var(--text);
+        background: linear-gradient(180deg, #eef4ff 0%, #f7f9fd 100%);
+      }
+
+      .wrap {
+        padding: 16px;
+      }
+
+      .hero {
+        background: linear-gradient(135deg, #1146c6 0%, #2f78ff 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 18px;
+        margin-bottom: 14px;
+        box-shadow: 0 18px 40px rgba(17, 70, 198, 0.25);
+      }
+
+      .hero h1 {
+        margin: 0 0 6px;
+        font-size: 20px;
+      }
+
+      .hero p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+        opacity: 0.92;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 8px 24px rgba(19, 30, 58, 0.06);
+      }
+
+      .panel h2 {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+
+      .tab {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: white;
+        color: var(--muted);
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .tab.active {
+        background: var(--brand-soft);
+        color: var(--brand);
+        border-color: #bfd0ff;
+      }
+
+      .tab-panel {
+        display: none;
+      }
+
+      .tab-panel.active {
+        display: block;
+      }
+
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .stat-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
+        background: #fbfdff;
+      }
+
+      .stat-label {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .stat-value {
+        font-size: 20px;
+        font-weight: 700;
+        margin-top: 4px;
+      }
+
+      label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        margin: 10px 0 4px;
+      }
+
+      input, textarea, select {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #cad7ea;
+        border-radius: 12px;
+        padding: 10px 11px;
+        font-size: 13px;
+        background: #fbfcff;
+      }
+
+      textarea {
+        min-height: 74px;
+        resize: vertical;
+      }
+
+      .switch {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        font-size: 12px;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 11px 12px;
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      .primary {
+        background: var(--brand);
+        color: white;
+      }
+
+      .secondary {
+        background: var(--brand-soft);
+        color: var(--brand);
+      }
+
+      .ghost {
+        background: #f8fafc;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .note {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 8px;
+      }
+
+      .step {
+        border-left: 3px solid #c5d4f8;
+        padding: 0 0 0 10px;
+      }
+
+      .step-title {
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 2px;
+      }
+
+      .step-body {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .latest-item {
+        border-top: 1px solid #edf2f8;
+        padding: 10px 0;
+      }
+
+      .latest-item:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #eef5ff;
+        color: #1b5dca;
+      }
+
+      .status {
+        margin-top: 10px;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .status.good {
+        color: var(--good);
+      }
+
+      .status.warn {
+        color: var(--warn);
+      }
+
+      .codebox {
+        white-space: pre-wrap;
+        font-family: Menlo, Monaco, monospace;
+        font-size: 11px;
+        line-height: 1.6;
+        padding: 12px;
+        border-radius: 12px;
+        background: #0f172a;
+        color: #dbeafe;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="hero">
+        <h1>READ MASTER 원장 대시보드</h1>
+        <p>가맹 학원 운영자가 학생 리포트 생성, 학부모 링크 발송, 전달 상태 확인까지 한 화면에서 처리할 수 있게 구성했습니다.</p>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="overview" onclick="activateTab('overview')">개요</button>
+        <button class="tab" data-tab="settings" onclick="activateTab('settings')">설정</button>
+        <button class="tab" data-tab="generate" onclick="activateTab('generate')">생성</button>
+        <button class="tab" data-tab="guide" onclick="activateTab('guide')">가이드</button>
+      </div>
+
+      <div id="tab-overview" class="tab-panel active">
+        <div class="panel">
+          <h2>운영 현황</h2>
+          <div class="stat-grid" id="stats"></div>
+        </div>
+
+        <div class="panel">
+          <h2>전달 채널 안내</h2>
+          <div class="note" id="channelGuide"></div>
+        </div>
+
+        <div class="panel">
+          <h2>현재 학부모 확인 URL</h2>
+          <div class="note" id="resolvedPortalBaseUrl"></div>
+        </div>
+
+        <div class="panel">
+          <h2>퍼널 연계 메모</h2>
+          <div class="note" id="funnelGuide"></div>
+        </div>
+
+        <div class="panel">
+          <h2>퍼널 연동 URL</h2>
+          <div class="codebox" id="integrationGuide"></div>
+        </div>
+
+        <div class="panel">
+          <h2>최근 생성 리포트</h2>
+          <div id="latestReports"></div>
+        </div>
+
+        <div class="panel">
+          <h2>최근 설명회/상담 리드</h2>
+          <div id="latestLeads"></div>
+        </div>
+
+        <div class="panel">
+          <h2>최근 학부모 링크 열람</h2>
+          <div id="latestPortalViews"></div>
+        </div>
+      </div>
+
+      <div id="tab-settings" class="tab-panel">
+        <div class="panel">
+          <h2>가맹점 기본 설정</h2>
+          <label>브랜드명</label>
+          <input id="brandName" />
+          <label>캠퍼스명</label>
+          <input id="campusName" />
+          <label>표시용 기관명</label>
+          <input id="schoolName" />
+          <label>발신자 이름</label>
+          <input id="senderName" />
+          <label>리포트 폴더명</label>
+          <input id="reportFolderName" />
+          <label>템플릿 Doc ID</label>
+          <input id="templateDocId" />
+          <label>학부모 확인 페이지 URL</label>
+          <input id="parentPortalBaseUrl" placeholder="웹앱 배포 후 URL 입력" />
+          <div class="switch"><input type="checkbox" id="enableParentPortal" style="width:auto" /> 학부모 확인 링크 사용</div>
+          <div class="switch"><input type="checkbox" id="enableEmailDelivery" style="width:auto" /> 이메일 발송 허용</div>
+          <label>전달 방식</label>
+          <select id="deliveryMode">
+            <option value="link_only">링크만 생성</option>
+            <option value="email">이메일 발송</option>
+            <option value="email_and_link">이메일 + 링크</option>
+            <option value="kakao_webhook">카카오 알림톡 공급사 webhook</option>
+          </select>
+          <label>카카오 webhook URL</label>
+          <input id="kakaoWebhookUrl" placeholder="알림톡 공급사 endpoint" />
+          <label>카카오 webhook Token</label>
+          <input id="kakaoWebhookToken" placeholder="Bearer token 또는 secret" />
+          <label>카카오 템플릿 코드</label>
+          <input id="kakaoTemplateCode" placeholder="예: RM_REPORT_01" />
+          <label>카카오 발신 프로필 Key</label>
+          <input id="kakaoSenderKey" placeholder="예: @readmaster_channel" />
+          <label>설명회 퍼널 URL</label>
+          <input id="funnelEntryUrl" placeholder="funnel.html 배포 URL" />
+          <label>상담 예약 URL</label>
+          <input id="bookingPageUrl" placeholder="book.html 배포 URL" />
+          <label>커리큘럼 소개 URL</label>
+          <input id="curriculumPageUrl" placeholder="curriculum.html 배포 URL" />
+          <div class="actions">
+            <button class="secondary" onclick="initializeWorkspace()">초기화</button>
+            <button class="primary" onclick="saveSettings()">설정 저장</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-generate" class="tab-panel">
+        <div class="panel">
+          <h2>단건 리포트 생성</h2>
+          <label>학생 이름</label>
+          <input id="studentName" />
+          <label>보호자 이름</label>
+          <input id="guardianName" />
+          <label>보호자 이메일</label>
+          <input id="guardianEmail" />
+          <label>보호자 연락처</label>
+          <input id="guardianPhone" />
+          <label>캠퍼스명</label>
+          <input id="singleCampusName" />
+          <label>반 이름</label>
+          <input id="className" />
+          <label>교사 이름</label>
+          <input id="teacherName" />
+          <label>종합 점수</label>
+          <input id="overallScore" />
+          <label>출석률</label>
+          <input id="attendanceRate" />
+          <label>강점</label>
+          <textarea id="strengths"></textarea>
+          <label>보완 영역</label>
+          <textarea id="growthAreas"></textarea>
+          <label>다음 단계</label>
+          <textarea id="nextSteps"></textarea>
+          <label>교사 코멘트</label>
+          <textarea id="comment"></textarea>
+          <div class="actions">
+            <button class="ghost" onclick="batchGenerate()">시트 일괄 생성</button>
+            <button class="primary" onclick="generateSingle()">단건 생성</button>
+          </div>
+          <div class="actions">
+            <button class="secondary" onclick="generateFromLevelTests()">레벨테스트 일괄 생성</button>
+            <button class="ghost" onclick="activateTab('overview')">운영 현황 보기</button>
+          </div>
+          <div id="status" class="status"></div>
+        </div>
+
+        <div class="panel">
+          <h2>리드에서 학생 시트로 전환</h2>
+          <div class="note">설명회/상담 리드를 Students 시트에 바로 올릴 때 사용합니다. 전환된 학생은 `Generate=true` 상태로 추가됩니다.</div>
+          <label>보호자 이름</label>
+          <input id="leadGuardianName" />
+          <label>학생 이름</label>
+          <input id="leadStudentName" />
+          <label>보호자 연락처</label>
+          <input id="leadGuardianPhone" />
+          <label>학년</label>
+          <input id="leadGrade" placeholder="예: 초5" />
+          <label>캠퍼스명</label>
+          <input id="leadCampusName" />
+          <label>배정 반 이름</label>
+          <input id="leadClassName" placeholder="예: 레벨테스트 대기" />
+          <label>담당 교사</label>
+          <input id="leadTeacherName" placeholder="예: 배정 예정" />
+          <label>전환 메모</label>
+          <textarea id="leadNote"></textarea>
+          <div class="actions">
+            <button class="secondary" onclick="fillFromLatestLead()">최근 리드 불러오기</button>
+            <button class="primary" onclick="promoteLead()">학생 시트로 전환</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-guide" class="tab-panel">
+        <div class="panel">
+          <h2>원장 빠른 시작</h2>
+          <div class="timeline" id="tutorialSteps"></div>
+          <div class="actions">
+            <button class="secondary" onclick="openTutorial()">상세 튜토리얼</button>
+            <button class="ghost" onclick="openLatestPortal()">학부모 페이지 열기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function activateTab(tabName) {
+        var tabs = document.querySelectorAll(".tab");
+        var panels = document.querySelectorAll(".tab-panel");
+
+        tabs.forEach(function (tab) {
+          tab.classList.toggle("active", tab.getAttribute("data-tab") === tabName);
+        });
+
+        panels.forEach(function (panel) {
+          panel.classList.toggle("active", panel.id === "tab-" + tabName);
+        });
+      }
+
+      function setStatus(message, isWarning) {
+        var el = document.getElementById("status");
+        el.textContent = message;
+        el.className = "status " + (isWarning ? "warn" : "good");
+      }
+
+      function getPayload() {
+        return {
+          studentName: document.getElementById("studentName").value,
+          guardianName: document.getElementById("guardianName").value,
+          guardianEmail: document.getElementById("guardianEmail").value,
+          guardianPhone: document.getElementById("guardianPhone").value,
+          campusName: document.getElementById("singleCampusName").value,
+          className: document.getElementById("className").value,
+          teacherName: document.getElementById("teacherName").value,
+          overallScore: document.getElementById("overallScore").value,
+          attendanceRate: document.getElementById("attendanceRate").value,
+          strengths: document.getElementById("strengths").value,
+          growthAreas: document.getElementById("growthAreas").value,
+          nextSteps: document.getElementById("nextSteps").value,
+          comment: document.getElementById("comment").value
+        };
+      }
+
+      function getSettings() {
+        return {
+          brandName: document.getElementById("brandName").value,
+          campusName: document.getElementById("campusName").value,
+          schoolName: document.getElementById("schoolName").value,
+          senderName: document.getElementById("senderName").value,
+          reportFolderName: document.getElementById("reportFolderName").value,
+          templateDocId: document.getElementById("templateDocId").value,
+          parentPortalBaseUrl: document.getElementById("parentPortalBaseUrl").value,
+          enableParentPortal: document.getElementById("enableParentPortal").checked,
+          enableEmailDelivery: document.getElementById("enableEmailDelivery").checked,
+          deliveryMode: document.getElementById("deliveryMode").value,
+          kakaoWebhookUrl: document.getElementById("kakaoWebhookUrl").value,
+          kakaoWebhookToken: document.getElementById("kakaoWebhookToken").value,
+          kakaoTemplateCode: document.getElementById("kakaoTemplateCode").value,
+          kakaoSenderKey: document.getElementById("kakaoSenderKey").value,
+          funnelEntryUrl: document.getElementById("funnelEntryUrl").value,
+          bookingPageUrl: document.getElementById("bookingPageUrl").value,
+          curriculumPageUrl: document.getElementById("curriculumPageUrl").value
+        };
+      }
+
+      function getLeadPromotionPayload() {
+        return {
+          guardianName: document.getElementById("leadGuardianName").value,
+          studentName: document.getElementById("leadStudentName").value,
+          guardianPhone: document.getElementById("leadGuardianPhone").value,
+          grade: document.getElementById("leadGrade").value,
+          campusName: document.getElementById("leadCampusName").value,
+          className: document.getElementById("leadClassName").value,
+          teacherName: document.getElementById("leadTeacherName").value,
+          note: document.getElementById("leadNote").value
+        };
+      }
+
+      function renderStats(data) {
+        document.getElementById("stats").innerHTML = [
+          renderStat("학생 행", data.stats.studentRows),
+          renderStat("생성 리포트", data.stats.reportRows),
+          renderStat("신규 리드", data.stats.leadRows),
+          renderStat("레벨테스트", data.stats.levelTestRows),
+          renderStat("링크 열람", data.stats.portalViewRows),
+          renderStat("일괄 대기", data.stats.pendingBatchRows),
+          renderStat("전달 완료", data.stats.sentReports)
+        ].join("");
+
+        document.getElementById("channelGuide").textContent = data.channelGuide;
+        document.getElementById("resolvedPortalBaseUrl").textContent = data.resolvedPortalBaseUrl || "아직 웹앱 배포 URL이 없습니다. 웹앱 배포 후 이 값을 설정에 저장해 주세요.";
+        document.getElementById("funnelGuide").textContent = data.funnelGuide.note || "";
+        document.getElementById("integrationGuide").textContent = renderIntegrationGuide(data.integrationGuide);
+        document.getElementById("latestReports").innerHTML = renderLatestReports(data.latestReports);
+        document.getElementById("latestLeads").innerHTML = renderLatestLeads(data.latestLeads);
+        document.getElementById("latestPortalViews").innerHTML = renderLatestPortalViews(data.latestPortalViews);
+        document.getElementById("tutorialSteps").innerHTML = renderTutorialSteps(data.tutorialSteps);
+
+        document.getElementById("brandName").value = data.config.brandName || "";
+        document.getElementById("campusName").value = data.config.campusName || "";
+        document.getElementById("schoolName").value = data.config.schoolName || "";
+        document.getElementById("senderName").value = data.config.senderName || "";
+        document.getElementById("reportFolderName").value = data.config.reportFolderName || "";
+        document.getElementById("templateDocId").value = data.config.templateDocId || "";
+        document.getElementById("parentPortalBaseUrl").value = data.config.parentPortalBaseUrl || "";
+        document.getElementById("enableParentPortal").checked = !!data.config.enableParentPortal;
+        document.getElementById("enableEmailDelivery").checked = !!data.config.enableEmailDelivery;
+        document.getElementById("deliveryMode").value = data.config.deliveryMode || "link_only";
+        document.getElementById("kakaoWebhookUrl").value = data.config.kakaoWebhookUrl || "";
+        document.getElementById("kakaoWebhookToken").value = data.config.kakaoWebhookToken || "";
+        document.getElementById("kakaoTemplateCode").value = data.config.kakaoTemplateCode || "";
+        document.getElementById("kakaoSenderKey").value = data.config.kakaoSenderKey || "";
+        document.getElementById("funnelEntryUrl").value = data.config.funnelEntryUrl || "";
+        document.getElementById("bookingPageUrl").value = data.config.bookingPageUrl || "";
+        document.getElementById("curriculumPageUrl").value = data.config.curriculumPageUrl || "";
+        document.getElementById("singleCampusName").value = data.config.campusName || "";
+        document.getElementById("leadCampusName").value = data.config.campusName || "";
+        window.latestLeadCache = data.latestLeads || [];
+      }
+
+      function renderStat(label, value) {
+        return (
+          '<div class="stat-card">' +
+          '<div class="stat-label">' + label + "</div>" +
+          '<div class="stat-value">' + value + "</div>" +
+          "</div>"
+        );
+      }
+
+      function renderLatestReports(items) {
+        if (!items || items.length === 0) {
+          return '<div class="note">아직 생성된 리포트가 없습니다.</div>';
+        }
+
+        return items.map(function (item) {
+          return (
+            '<div class="latest-item">' +
+            '<div><strong>' + item.studentName + '</strong> · ' + (item.guardianName || "") + '</div>' +
+            '<div class="note">' + (item.portalUrl || item.docUrl || "링크 없음") + "</div>" +
+            '<div style="margin-top:6px"><span class="badge">' + (item.deliveryStatus || "CREATED") + "</span></div>" +
+            "</div>"
+          );
+        }).join("");
+      }
+
+      function renderTutorialSteps(items) {
+        return items.map(function (item) {
+          return (
+            '<div class="step">' +
+            '<div class="step-title">' + item.title + "</div>" +
+            '<div class="step-body">' + item.body + "</div>" +
+            "</div>"
+          );
+        }).join("");
+      }
+
+      function renderLatestLeads(items) {
+        if (!items || items.length === 0) {
+          return '<div class="note">최근 유입 리드가 없습니다.</div>';
+        }
+
+        return items.map(function (item) {
+          return (
+            '<div class="latest-item">' +
+            '<div><strong>' + (item.guardianName || "이름 없음") + '</strong> · ' + (item.phone || "") + '</div>' +
+            '<div class="note">' + (item.campusName || "") + ' / ' + (item.session || "일정 미정") + "</div>" +
+            '<div style="margin-top:6px"><span class="badge">' + (item.status || "NEW") + "</span></div>" +
+            "</div>"
+          );
+        }).join("");
+      }
+
+      function renderLatestPortalViews(items) {
+        if (!items || items.length === 0) {
+          return '<div class="note">아직 학부모 링크 열람 기록이 없습니다.</div>';
+        }
+
+        return items.map(function (item) {
+          return (
+            '<div class="latest-item">' +
+            '<div><strong>' + (item.studentName || "학생명 없음") + '</strong> · ' + (item.guardianName || "") + '</div>' +
+            '<div class="note">' + (item.campusName || "") + ' / ' + (item.viewedAt || "") + "</div>" +
+            "</div>"
+          );
+        }).join("");
+      }
+
+      function renderIntegrationGuide(guide) {
+        if (!guide || !guide.intakePostUrl) {
+          return "웹앱을 먼저 배포하면 여기에서 설명회 퍼널 POST URL과 intake-guide URL을 확인할 수 있습니다.";
+        }
+
+        return [
+          "POST URL",
+          guide.intakePostUrl,
+          "",
+          "GET 가이드 URL",
+          guide.intakeGuideUrl || "",
+          "",
+          "지원 필드",
+          (guide.supportedFields || []).join(", "),
+          "",
+          guide.note || ""
+        ].join("\n");
+      }
+
+      function loadDashboard() {
+        google.script.run.withSuccessHandler(renderStats).getDashboardData();
+      }
+
+      function fillFromLatestLead() {
+        var items = window.latestLeadCache || [];
+        if (!items.length) {
+          setStatus("최근 리드가 없습니다.", true);
+          return;
+        }
+
+        var lead = items[0];
+        document.getElementById("leadGuardianName").value = lead.guardianName || "";
+        document.getElementById("leadGuardianPhone").value = lead.phone || "";
+        document.getElementById("leadGrade").value = lead.grade || "";
+        document.getElementById("leadCampusName").value = lead.campusName || document.getElementById("campusName").value || "";
+        document.getElementById("leadClassName").value = "레벨테스트 대기";
+        document.getElementById("leadTeacherName").value = "배정 예정";
+        document.getElementById("leadNote").value = (lead.session || "") + " / 설명회 리드";
+        setStatus("최근 리드를 전환 폼에 채웠습니다.");
+      }
+
+      function initializeWorkspace() {
+        setStatus("READ MASTER 운영 시트를 초기화하는 중입니다.");
+        google.script.run.withSuccessHandler(function () {
+          setStatus("초기화가 완료되었습니다.");
+          loadDashboard();
+        }).initializeWorkspace();
+      }
+
+      function saveSettings() {
+        setStatus("설정을 저장하는 중입니다.");
+        google.script.run.withSuccessHandler(function () {
+          setStatus("설정 저장이 완료되었습니다.");
+          loadDashboard();
+        }).saveAppConfig(getSettings());
+      }
+
+      function generateSingle() {
+        setStatus("리포트를 생성하고 전달 채널을 준비하는 중입니다.");
+        google.script.run
+          .withSuccessHandler(function (result) {
+            setStatus("생성 완료: " + (result.portalUrl || result.docUrl || "링크 준비 완료"));
+            loadDashboard();
+          })
+          .withFailureHandler(function (error) {
+            setStatus("오류: " + error.message, true);
+          })
+          .createStudentReport(getPayload());
+      }
+
+      function batchGenerate() {
+        setStatus("체크된 학생을 기준으로 일괄 생성 중입니다.");
+        google.script.run
+          .withSuccessHandler(function (result) {
+            setStatus(result.count + "건 생성 완료");
+            loadDashboard();
+          })
+          .withFailureHandler(function (error) {
+            setStatus("오류: " + error.message, true);
+          })
+          .createReportsFromSheet();
+      }
+
+      function generateFromLevelTests() {
+        setStatus("레벨테스트 결과를 기준으로 리포트를 생성하는 중입니다.");
+        google.script.run
+          .withSuccessHandler(function (result) {
+            setStatus(result.count + "건 생성 완료");
+            loadDashboard();
+          })
+          .withFailureHandler(function (error) {
+            setStatus("오류: " + error.message, true);
+          })
+          .createReportsFromLevelTests();
+      }
+
+      function promoteLead() {
+        setStatus("리드를 학생 시트로 전환하는 중입니다.");
+        google.script.run
+          .withSuccessHandler(function (result) {
+            setStatus(result.studentName + " 학생을 Students 시트로 전환했습니다.");
+            loadDashboard();
+          })
+          .withFailureHandler(function (error) {
+            setStatus("오류: " + error.message, true);
+          })
+          .promoteLeadToStudent(getLeadPromotionPayload());
+      }
+
+      function openTutorial() {
+        google.script.run.showTutorialDialog();
+      }
+
+      function openLatestPortal() {
+        google.script.run
+          .withSuccessHandler(function () {
+            setStatus("최신 학부모 페이지를 새 창으로 열었습니다.");
+          })
+          .withFailureHandler(function (error) {
+            setStatus("오류: " + error.message, true);
+          })
+          .openLatestParentPortal();
+      }
+
+      loadDashboard();
+    </script>
+  </body>
+</html>

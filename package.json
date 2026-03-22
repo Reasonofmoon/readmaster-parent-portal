@@ -1,0 +1,16 @@
+{
+  "name": "parent-report-gas",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "clasp:login": "clasp login",
+    "clasp:create": "clasp create --type standalone --title \"Parent Report Apps Script\" --rootDir ./src",
+    "clasp:push": "clasp push",
+    "clasp:pull": "clasp pull",
+    "clasp:open": "clasp open",
+    "clasp:tail": "clasp tail-logs"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.0.6"
+  }
+}

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 24px;
+        color: #172033;
+        background: linear-gradient(180deg, #eef4ff 0%, #ffffff 100%);
+      }
+
+      .hero {
+        background: #103fb7;
+        color: white;
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 18px;
+      }
+
+      .hero h1 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+
+      .hero p {
+        margin: 0;
+        line-height: 1.6;
+        font-size: 14px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .card {
+        background: white;
+        border: 1px solid #dbe4f0;
+        border-radius: 18px;
+        padding: 16px;
+        box-shadow: 0 10px 28px rgba(25, 39, 69, 0.06);
+      }
+
+      .title {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .body {
+        font-size: 13px;
+        line-height: 1.6;
+        color: #5b6880;
+      }
+
+      .footer {
+        margin-top: 16px;
+        font-size: 12px;
+        color: #66758f;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hero">
+      <h1>READ MASTER 가맹점 운영 가이드</h1>
+      <p>이 도구는 원장과 강사가 학생 리포트를 빠르게 만들고, 학부모에게 이메일·링크·카카오 전달 준비까지 끝내도록 설계했습니다.</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="title">1. 워크스페이스 초기화</div>
+        <div class="body">Students, Reports, Leads, LevelTests, PortalViews 시트를 자동으로 만들고 샘플 데이터를 넣습니다. 프랜차이즈 캠퍼스가 바로 시작할 수 있게 기본 컬럼을 고정했습니다.</div>
+      </div>
+      <div class="card">
+        <div class="title">2. 가맹점 설정 저장</div>
+        <div class="body">브랜드명, 캠퍼스명, 발신자명, 리포트 저장 폴더, 학부모 확인 페이지 URL을 저장합니다. 이 단계가 끝나야 링크 전달과 리포트 브랜딩이 맞습니다.</div>
+      </div>
+      <div class="card">
+        <div class="title">3. 학생 데이터 입력</div>
+        <div class="body">교사는 Students 시트에 학생명, 보호자 연락처, 강점, 보완점, 다음 단계, 교사 코멘트를 넣습니다. Generate 열을 체크하면 일괄 생성 대상이 됩니다.</div>
+      </div>
+      <div class="card">
+        <div class="title">4. 리포트 생성과 전달</div>
+        <div class="body">리포트를 생성하면 Google Docs, PDF, 학부모 확인 링크가 같이 만들어집니다. 전달 방식은 링크 전송, 이메일, 알림톡 webhook 중에서 고를 수 있습니다.</div>
+      </div>
+      <div class="card">
+        <div class="title">5. 학부모 확인 링크</div>
+        <div class="body">웹앱으로 배포하면 학부모가 로그인 없이 링크로 리포트를 확인할 수 있습니다. 카카오톡 채널, 상담톡, 문자 발송에 이 링크를 그대로 활용할 수 있습니다.</div>
+      </div>
+      <div class="card">
+        <div class="title">6. 카카오 자동 발송</div>
+        <div class="body">임의 학부모 대상 자동 발송은 일반 Kakao Open API가 아니라 알림톡 공급사 또는 카카오 비즈메시지 연동이 필요합니다. 이 앱은 그 공급사 webhook을 붙일 준비 구조까지 넣었습니다.</div>
+      </div>
+      <div class="card">
+        <div class="title">7. 설명회 퍼널 연결</div>
+        <div class="body">같은 Apps Script 웹앱 URL로 설명회 랜딩페이지와 상담 예약 페이지의 POST 요청을 받습니다. Leads 시트에 자동으로 누적되고, 원장은 대시보드에서 최근 리드를 바로 확인할 수 있습니다.</div>
+      </div>
+      <div class="card">
+        <div class="title">8. 리드에서 학생 전환</div>
+        <div class="body">설명회 리드가 상담으로 이어지면 사이드바에서 학생 이름과 반 정보를 입력해 Students 시트로 바로 전환합니다. 이후 레벨테스트 결과와 학부모 리포트를 같은 흐름으로 이어갈 수 있습니다.</div>
+      </div>
+      <div class="card">
+        <div class="title">9. 레벨테스트 리포트 자동화</div>
+        <div class="body">LevelTests 시트에 점수와 추천 반을 입력한 뒤, `레벨테스트 일괄 생성`을 누르면 학부모 리포트를 바로 만들 수 있습니다. 설명회 후 테스트, 배정, 상담 안내까지 한 흐름으로 연결됩니다.</div>
+      </div>
+      <div class="card">
+        <div class="title">10. 학부모 링크 열람 로그</div>
+        <div class="body">학부모가 링크를 열면 PortalViews 시트에 최근 열람 기록이 남습니다. 원장은 누가 리포트를 확인했는지 보고 후속 상담 타이밍을 잡을 수 있습니다.</div>
+      </div>
+    </div>
+
+    <div class="footer">배포 후에는 웹앱 URL을 설정에 넣고, `funnel.html`/`book.html`을 같은 endpoint로 연결해 설명회부터 리포트까지 한 흐름으로 운영하면 됩니다.</div>
+  </body>
+</html>
