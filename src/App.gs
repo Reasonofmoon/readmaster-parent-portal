@@ -111,6 +111,7 @@ function getDashboardData() {
     latestPortalViews: getLatestPortalViews_(portalViewValues),
     followUpQueue: getFollowUpQueue_(leadValues, reportValues, portalViewValues),
     callList: getCallList_(leadValues, reportValues, portalViewValues),
+    ownerWorkboard: getOwnerWorkboard_(leadValues, reportValues, portalViewValues),
     tutorialSteps: getTutorialSteps_(),
     channelGuide: getChannelGuide_(config),
     resolvedPortalBaseUrl: getResolvedPortalBaseUrl_(config),
@@ -612,6 +613,27 @@ function getCallList_(leadValues, reportValues, portalViewValues) {
   });
 }
 
+function getOwnerWorkboard_(leadValues, reportValues, portalViewValues) {
+  var list = getCallList_(leadValues, reportValues, portalViewValues);
+  var grouped = {};
+
+  list.forEach(function (item) {
+    var owner = safeString_(item.owner, "").trim() || "미지정";
+    if (!grouped[owner]) {
+      grouped[owner] = [];
+    }
+    grouped[owner].push(item);
+  });
+
+  return Object.keys(grouped).sort().map(function (owner) {
+    return {
+      owner: owner,
+      count: grouped[owner].length,
+      items: grouped[owner]
+    };
+  });
+}
+
 function buildFollowUpItem_(rowIndex, row, title, reason) {
   return {
     rowIndex: rowIndex,
@@ -713,6 +735,10 @@ function getTutorialSteps_() {
     {
       title: "9. 후속조치 큐 확인",
       body: "연락 후 방치된 리드, 테스트 예약일이 지난 리드, 리포트를 아직 안 본 학부모를 자동으로 찾아 개요 화면에 우선 표시합니다."
+    },
+    {
+      title: "10. 담당자별 오늘 할 일",
+      body: "원장, 실장, 강사별로 오늘 처리할 콜 리스트를 자동으로 묶어 보여주므로 담당자별 할 일을 빠르게 배분할 수 있습니다."
     }
   ];
 }

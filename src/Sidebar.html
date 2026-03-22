@@ -374,6 +374,11 @@
         </div>
 
         <div class="panel">
+          <h2>담당자별 오늘 할 일</h2>
+          <div id="ownerWorkboard"></div>
+        </div>
+
+        <div class="panel">
           <h2>후속 메시지 초안</h2>
           <label>선택된 리드</label>
           <input id="draftTarget" readonly />
@@ -649,6 +654,7 @@
         document.getElementById("latestLeads").innerHTML = renderLatestLeads(data.latestLeads);
         document.getElementById("followUpQueue").innerHTML = renderFollowUpQueue(data.followUpQueue);
         document.getElementById("callList").innerHTML = renderCallList(data.callList);
+        document.getElementById("ownerWorkboard").innerHTML = renderOwnerWorkboard(data.ownerWorkboard);
         document.getElementById("crmBoard").innerHTML = renderLeadsBoard(data.leadsBoard);
         document.getElementById("latestPortalViews").innerHTML = renderLatestPortalViews(data.latestPortalViews);
         document.getElementById("tutorialSteps").innerHTML = renderTutorialSteps(data.tutorialSteps);
@@ -779,6 +785,36 @@
             '<div style="margin-top:8px" class="crm-actions">' +
             '<button class="secondary tiny" onclick="loadDraft(' + item.rowIndex + ', \'' + escapeJs(item.guardianName || "") + '\')">메시지 초안</button>' +
             '<button class="ghost tiny" onclick="selectLeadRow(' + item.rowIndex + '); activateTab(\'crm\');">상세 편집</button>' +
+            '</div>' +
+            '</div>'
+          );
+        }).join("");
+      }
+
+      function renderOwnerWorkboard(groups) {
+        if (!groups || !groups.length) {
+          return '<div class="note">담당자별로 분류할 오늘 할 일이 없습니다.</div>';
+        }
+
+        return groups.map(function (group) {
+          return (
+            '<div class="latest-item">' +
+            '<div><strong>' + escapeHtml(group.owner || "미지정") + '</strong> · ' + group.count + '건</div>' +
+            renderOwnerItems(group.items || []) +
+            '</div>'
+          );
+        }).join("");
+      }
+
+      function renderOwnerItems(items) {
+        return items.map(function (item) {
+          return (
+            '<div class="crm-meta" style="margin-top:8px;">' +
+            '#' + item.priority + ' ' + escapeHtml(item.guardianName || "") + ' · ' + escapeHtml(item.phone || "") + '<br/>' +
+            escapeHtml(item.title || "") + ' / ' + escapeHtml(item.nextAction || "다음 액션 미정") +
+            '<div style="margin-top:6px" class="crm-actions">' +
+            '<button class="secondary tiny" onclick="loadDraft(' + item.rowIndex + ', \'' + escapeJs(item.guardianName || "") + '\')">초안</button>' +
+            '<button class="ghost tiny" onclick="selectLeadRow(' + item.rowIndex + '); activateTab(\'crm\');">CRM</button>' +
             '</div>' +
             '</div>'
           );
