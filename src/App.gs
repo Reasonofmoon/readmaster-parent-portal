@@ -1,4 +1,5 @@
 var APP_CONFIG_KEY = "PARENT_REPORT_APP_CONFIG";
+var DEFAULT_FUNNEL_BASE_URL = "https://readmaster-funnel.vercel.app";
 
 function onOpen() {
   SpreadsheetApp.getUi()
@@ -7,6 +8,14 @@ function onOpen() {
     .addItem("빠른 시작 가이드", "showTutorialDialog")
     .addSeparator()
     .addItem("워크스페이스 초기화", "initializeWorkspace")
+    .addItem("리드 상태 색상 적용", "applyLeadStatusFormatting")
+    .addItem("최근 7일 신규 리드 보기", "showRecentNewLeads")
+    .addItem("오늘 후속 연락 리드 보기", "showTodayFollowUpLeads")
+    .addItem("담당자별 리드 보기", "showOwnerLeads")
+    .addItem("캠퍼스별 리드 보기", "showCampusLeads")
+    .addItem("테스트 리드 숨기기", "hideTestLeads")
+    .addItem("리드 숨김 해제", "showAllLeads")
+    .addItem("테스트 리드 정리", "cleanupTestLeads")
     .addItem("학부모 페이지 미리보기", "openLatestParentPortal")
     .addToUi();
 }
@@ -86,7 +95,175 @@ function initializeWorkspace() {
   ensureLeadsSheet_();
   ensureLevelTestsSheet_();
   ensurePortalViewsSheet_();
+  applyLeadStatusFormatting_();
   SpreadsheetApp.getActive().toast("READ MASTER 운영 시트와 샘플 데이터가 준비되었습니다.", "READ MASTER");
+}
+
+function cleanupTestLeads() {
+  var result = cleanupTestLeads_();
+  var message = result.deletedCount
+    ? "테스트 리드 " + result.deletedCount + "건을 정리했습니다."
+    : "정리할 테스트 리드가 없습니다.";
+
+  SpreadsheetApp.getActive().toast(message, "READ MASTER");
+
+  return result;
+}
+
+function hideTestLeads() {
+  var result = setLeadRowVisibility_(false);
+  var message = result.hiddenCount
+    ? "테스트 리드 " + result.hiddenCount + "건을 숨겼습니다."
+    : "숨길 테스트 리드가 없습니다.";
+
+  SpreadsheetApp.getActive().toast(message, "READ MASTER");
+
+  return result;
+}
+
+function showAllLeads() {
+  var sheet = ensureLeadsSheet_();
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow > 1) {
+    sheet.showRows(2, lastRow - 1);
+  }
+
+  SpreadsheetApp.getActive().toast("Leads 시트의 숨김을 모두 해제했습니다.", "READ MASTER");
+
+  return {
+    shownCount: Math.max(lastRow - 1, 0)
+  };
+}
+
+function applyLeadStatusFormatting() {
+  var result = applyLeadStatusFormatting_();
+  SpreadsheetApp.getActive().toast("Leads 시트 상태 색상을 적용했습니다.", "READ MASTER");
+  return result;
+}
+
+function showRecentNewLeads() {
+  var sheet = ensureLeadsSheet_();
+  var rowIndexes = getRecentNewLeadRowIndexes_(sheet, 7);
+  var lastRow = sheet.getLastRow();
+  var hiddenCount = 0;
+
+  if (lastRow > 1) {
+    sheet.showRows(2, lastRow - 1);
+  }
+
+  for (var rowIndex = 2; rowIndex <= lastRow; rowIndex += 1) {
+    if (rowIndexes.indexOf(rowIndex) === -1) {
+      sheet.hideRows(rowIndex);
+      hiddenCount += 1;
+    }
+  }
+
+  SpreadsheetApp.getActive().toast(
+    rowIndexes.length
+      ? "최근 7일 신규 리드 " + rowIndexes.length + "건만 표시합니다."
+      : "최근 7일 신규 리드가 없습니다.",
+    "READ MASTER"
+  );
+
+  return {
+    visibleCount: rowIndexes.length,
+    hiddenCount: hiddenCount,
+    rowIndexes: rowIndexes
+  };
+}
+
+function showTodayFollowUpLeads() {
+  var sheet = ensureLeadsSheet_();
+  var rowIndexes = getFollowUpLeadRowIndexes_();
+  var result = applyLeadRowFilter_(sheet, rowIndexes);
+
+  SpreadsheetApp.getActive().toast(
+    rowIndexes.length
+      ? "오늘 후속 연락 대상 " + rowIndexes.length + "건만 표시합니다."
+      : "오늘 후속 연락 대상이 없습니다.",
+    "READ MASTER"
+  );
+
+  return {
+    visibleCount: rowIndexes.length,
+    hiddenCount: result.hiddenCount,
+    rowIndexes: rowIndexes
+  };
+}
+
+function showOwnerLeads() {
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.prompt(
+    "담당자별 리드 보기",
+    "담당자 이름을 입력하세요. 미지정 리드는 `미지정`으로 입력합니다.",
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return { cancelled: true };
+  }
+
+  var owner = safeString_(response.getResponseText(), "").trim();
+  if (!owner) {
+    ui.alert("담당자 이름이 비어 있습니다.");
+    return { cancelled: true };
+  }
+
+  var sheet = ensureLeadsSheet_();
+  var rowIndexes = getLeadRowIndexesByOwner_(sheet, owner);
+  var result = applyLeadRowFilter_(sheet, rowIndexes);
+
+  SpreadsheetApp.getActive().toast(
+    rowIndexes.length
+      ? "`" + owner + "` 담당 리드 " + rowIndexes.length + "건만 표시합니다."
+      : "`" + owner + "` 담당 리드가 없습니다.",
+    "READ MASTER"
+  );
+
+  return {
+    owner: owner,
+    visibleCount: rowIndexes.length,
+    hiddenCount: result.hiddenCount,
+    rowIndexes: rowIndexes
+  };
+}
+
+function showCampusLeads() {
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.prompt(
+    "캠퍼스별 리드 보기",
+    "캠퍼스 이름을 정확히 입력하세요. 예: 본원, READ MASTER 대치점",
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return { cancelled: true };
+  }
+
+  var campusName = safeString_(response.getResponseText(), "").trim();
+  if (!campusName) {
+    ui.alert("캠퍼스 이름이 비어 있습니다.");
+    return { cancelled: true };
+  }
+
+  var sheet = ensureLeadsSheet_();
+  var rowIndexes = getLeadRowIndexesByCampus_(sheet, campusName);
+  var result = applyLeadRowFilter_(sheet, rowIndexes);
+
+  SpreadsheetApp.getActive().toast(
+    rowIndexes.length
+      ? "`" + campusName + "` 리드 " + rowIndexes.length + "건만 표시합니다."
+      : "`" + campusName + "` 리드가 없습니다.",
+    "READ MASTER"
+  );
+
+  return {
+    campusName: campusName,
+    visibleCount: rowIndexes.length,
+    hiddenCount: result.hiddenCount,
+    rowIndexes: rowIndexes
+  };
 }
 
 function getDashboardData() {
@@ -393,30 +570,63 @@ function include(filename) {
 }
 
 function getAppConfig_() {
+  var defaults = buildDefaultAppConfig_();
   var raw = PropertiesService.getScriptProperties().getProperty(APP_CONFIG_KEY);
   if (!raw) {
-    return {
-      brandName: "READ MASTER",
-      campusName: "본원",
-      schoolName: "READ MASTER",
-      senderName: "READ MASTER 리포트봇",
-      templateDocId: "",
-      reportFolderName: "READ MASTER Parent Reports",
-      parentPortalBaseUrl: "",
-      enableParentPortal: true,
-      enableEmailDelivery: false,
-      deliveryMode: "link_only",
-      kakaoWebhookUrl: "",
-      kakaoWebhookToken: "",
-      kakaoTemplateCode: "",
-      kakaoSenderKey: "",
-      funnelEntryUrl: "",
-      bookingPageUrl: "",
-      curriculumPageUrl: ""
-    };
+    return defaults;
   }
 
-  return JSON.parse(raw);
+  return mergeAppConfigWithDefaults_(JSON.parse(raw), defaults);
+}
+
+function buildDefaultAppConfig_() {
+  return {
+    brandName: "READ MASTER",
+    campusName: "본원",
+    schoolName: "READ MASTER",
+    senderName: "READ MASTER 리포트봇",
+    templateDocId: "",
+    reportFolderName: "READ MASTER Parent Reports",
+    parentPortalBaseUrl: "",
+    enableParentPortal: true,
+    enableEmailDelivery: false,
+    deliveryMode: "link_only",
+    kakaoWebhookUrl: "",
+    kakaoWebhookToken: "",
+    kakaoTemplateCode: "",
+    kakaoSenderKey: "",
+    funnelEntryUrl: DEFAULT_FUNNEL_BASE_URL + "/funnel",
+    bookingPageUrl: DEFAULT_FUNNEL_BASE_URL + "/book",
+    curriculumPageUrl: DEFAULT_FUNNEL_BASE_URL + "/curriculum"
+  };
+}
+
+function mergeAppConfigWithDefaults_(config, defaults) {
+  var result = {};
+  var key = "";
+
+  for (key in defaults) {
+    if (Object.prototype.hasOwnProperty.call(defaults, key)) {
+      result[key] = defaults[key];
+    }
+  }
+
+  for (key in config) {
+    if (!Object.prototype.hasOwnProperty.call(config, key)) {
+      continue;
+    }
+
+    var value = config[key];
+    if (typeof defaults[key] === "string") {
+      result[key] = safeString_(value, result[key]);
+    } else if (typeof defaults[key] === "boolean") {
+      result[key] = typeof value === "boolean" ? value : result[key];
+    } else {
+      result[key] = value;
+    }
+  }
+
+  return result;
 }
 
 function buildStats_(studentValues, reportValues, leadValues, levelTestValues, portalViewValues) {
@@ -542,6 +752,62 @@ function getLatestPortalViews_(portalViewValues) {
 }
 
 function getFollowUpQueue_(leadValues, reportValues, portalViewValues) {
+  return buildFollowUpQueueItems_(leadValues, reportValues, portalViewValues).slice(0, 8);
+}
+
+function getCallList_(leadValues, reportValues, portalViewValues) {
+  return getFollowUpQueue_(leadValues, reportValues, portalViewValues).map(function (item, index) {
+    return {
+      priority: index + 1,
+      rowIndex: item.rowIndex,
+      guardianName: item.guardianName,
+      phone: item.phone,
+      campusName: item.campusName,
+      title: item.title,
+      nextAction: item.nextAction,
+      owner: item.owner
+    };
+  });
+}
+
+function getOwnerWorkboard_(leadValues, reportValues, portalViewValues) {
+  var list = getCallList_(leadValues, reportValues, portalViewValues);
+  var grouped = {};
+
+  list.forEach(function (item) {
+    var owner = safeString_(item.owner, "").trim() || "미지정";
+    if (!grouped[owner]) {
+      grouped[owner] = [];
+    }
+    grouped[owner].push(item);
+  });
+
+  return Object.keys(grouped).sort().map(function (owner) {
+    return {
+      owner: owner,
+      count: grouped[owner].length,
+      items: grouped[owner]
+    };
+  });
+}
+
+function buildFollowUpItem_(rowIndex, row, title, reason) {
+  return {
+    rowIndex: rowIndex,
+    title: title,
+    reason: reason,
+    guardianName: safeString_(row[1], ""),
+    phone: safeString_(row[2], ""),
+    grade: safeString_(row[3], ""),
+    session: safeString_(row[4], ""),
+    campusName: safeString_(row[5], ""),
+    status: normalizeLeadStatus_(row[7]),
+    nextAction: safeString_(row[11], ""),
+    owner: safeString_(row[12], "")
+  };
+}
+
+function buildFollowUpQueueItems_(leadValues, reportValues, portalViewValues) {
   var items = [];
   var now = new Date().getTime();
   var reportIndex = {};
@@ -595,59 +861,7 @@ function getFollowUpQueue_(leadValues, reportValues, portalViewValues) {
     }
   }
 
-  return items.slice(0, 8);
-}
-
-function getCallList_(leadValues, reportValues, portalViewValues) {
-  return getFollowUpQueue_(leadValues, reportValues, portalViewValues).map(function (item, index) {
-    return {
-      priority: index + 1,
-      rowIndex: item.rowIndex,
-      guardianName: item.guardianName,
-      phone: item.phone,
-      campusName: item.campusName,
-      title: item.title,
-      nextAction: item.nextAction,
-      owner: item.owner
-    };
-  });
-}
-
-function getOwnerWorkboard_(leadValues, reportValues, portalViewValues) {
-  var list = getCallList_(leadValues, reportValues, portalViewValues);
-  var grouped = {};
-
-  list.forEach(function (item) {
-    var owner = safeString_(item.owner, "").trim() || "미지정";
-    if (!grouped[owner]) {
-      grouped[owner] = [];
-    }
-    grouped[owner].push(item);
-  });
-
-  return Object.keys(grouped).sort().map(function (owner) {
-    return {
-      owner: owner,
-      count: grouped[owner].length,
-      items: grouped[owner]
-    };
-  });
-}
-
-function buildFollowUpItem_(rowIndex, row, title, reason) {
-  return {
-    rowIndex: rowIndex,
-    title: title,
-    reason: reason,
-    guardianName: safeString_(row[1], ""),
-    phone: safeString_(row[2], ""),
-    grade: safeString_(row[3], ""),
-    session: safeString_(row[4], ""),
-    campusName: safeString_(row[5], ""),
-    status: normalizeLeadStatus_(row[7]),
-    nextAction: safeString_(row[11], ""),
-    owner: safeString_(row[12], "")
-  };
+  return items;
 }
 
 function buildLeadMatchKey_(guardianName, phone) {
@@ -778,11 +992,19 @@ function getFunnelGuide_(config) {
 
 function getIntegrationGuide_(config) {
   var baseUrl = getResolvedPortalBaseUrl_(config);
+  var campusName = safeString_(config.campusName, "READ MASTER 대치점");
 
   return {
     portalBaseUrl: baseUrl,
     intakePostUrl: baseUrl,
     intakeGuideUrl: baseUrl ? baseUrl + (baseUrl.indexOf("?") === -1 ? "?mode=intake-guide" : "&mode=intake-guide") : "",
+    readmasterConfigPath: "assets/readmaster-config.js",
+    readmasterConfigExample: {
+      endpoint: baseUrl,
+      branch: campusName,
+      funnelSource: "설명회 퍼널",
+      bookingSource: "상담 예약 페이지"
+    },
     supportedFields: [
       "parentName 또는 guardianName",
       "phone",
@@ -801,18 +1023,25 @@ function getIntegrationGuide_(config) {
 function buildPublicGuidePayload_() {
   var config = getAppConfig_();
   var baseUrl = getResolvedPortalBaseUrl_(config);
+  var campusName = safeString_(config.campusName, "READ MASTER 대치점");
 
   return {
     status: "ok",
     app: "readmaster-parent-report",
     intakePostUrl: baseUrl,
     parentPortalBaseUrl: baseUrl,
+    readmasterConfig: {
+      endpoint: baseUrl,
+      branch: campusName,
+      funnelSource: "설명회 퍼널",
+      bookingSource: "상담 예약 페이지"
+    },
     samplePayload: {
       parentName: "홍길동",
       phone: "010-1234-5678",
       grade: "초5",
       session: "설명회 3/28 11:00",
-      branch: safeString_(config.campusName, "READ MASTER 대치점"),
+      branch: campusName,
       source: "설명회 퍼널",
       studentName: "홍서준",
       email: "parent@example.com",
@@ -1303,6 +1532,261 @@ function createLeadFromSubmission_(input) {
     campusName: campusName,
     intakeMode: safeString_(input._intakeMode, "json")
   };
+}
+
+function cleanupTestLeads_() {
+  var sheet = ensureLeadsSheet_();
+  var deletedRows = getTestLeadRowIndexes_(sheet);
+
+  deleteRowsDescending_(sheet, deletedRows);
+
+  return {
+    deletedCount: deletedRows.length,
+    deletedRows: deletedRows
+  };
+}
+
+function setLeadRowVisibility_(showRows) {
+  var sheet = ensureLeadsSheet_();
+  var lastRow = sheet.getLastRow();
+  var rowIndexes = getTestLeadRowIndexes_(sheet);
+
+  if (lastRow > 1) {
+    sheet.showRows(2, lastRow - 1);
+  }
+
+  rowIndexes.forEach(function(rowIndex) {
+    if (showRows) {
+      sheet.showRows(rowIndex);
+    } else {
+      sheet.hideRows(rowIndex);
+    }
+  });
+
+  return {
+    hiddenCount: showRows ? 0 : rowIndexes.length,
+    shownCount: showRows ? rowIndexes.length : 0,
+    rowIndexes: rowIndexes
+  };
+}
+
+function applyLeadRowFilter_(sheet, rowIndexes) {
+  var lastRow = sheet.getLastRow();
+  var hiddenCount = 0;
+  var visibleMap = {};
+
+  rowIndexes.forEach(function(rowIndex) {
+    visibleMap[rowIndex] = true;
+  });
+
+  if (lastRow > 1) {
+    sheet.showRows(2, lastRow - 1);
+  }
+
+  for (var rowIndex = 2; rowIndex <= lastRow; rowIndex += 1) {
+    if (!visibleMap[rowIndex]) {
+      sheet.hideRows(rowIndex);
+      hiddenCount += 1;
+    }
+  }
+
+  return {
+    visibleCount: rowIndexes.length,
+    hiddenCount: hiddenCount
+  };
+}
+
+function applyLeadStatusFormatting_() {
+  var sheet = ensureLeadsSheet_();
+  var range = sheet.getRange("A2:M");
+  var existingRules = sheet.getConditionalFormatRules().filter(function(rule) {
+    return !isLeadStatusFormattingRule_(rule, sheet.getName());
+  });
+
+  var statusRules = [
+    buildLeadStatusRule_(sheet, range, "NEW", "#fff4cc", "#7a5400"),
+    buildLeadStatusRule_(sheet, range, "CONTACTED", "#d8ecff", "#0b5394"),
+    buildLeadStatusRule_(sheet, range, "TEST_BOOKED", "#e7f4e4", "#274e13"),
+    buildLeadStatusRule_(sheet, range, "REPORT_READY", "#f3e8ff", "#5b2c83"),
+    buildLeadStatusRule_(sheet, range, "ENROLLED", "#d9ead3", "#1c5e2f"),
+    buildLeadStatusRule_(sheet, range, "PROMOTED", "#ead1dc", "#741b47")
+  ];
+
+  sheet.setConditionalFormatRules(existingRules.concat(statusRules));
+
+  return {
+    ruleCount: statusRules.length
+  };
+}
+
+function isLeadStatusFormattingRule_(rule, sheetName) {
+  var ranges = rule.getRanges();
+
+  for (var i = 0; i < ranges.length; i += 1) {
+    if (
+      ranges[i].getSheet().getName() === sheetName &&
+      ranges[i].getA1Notation() === "A2:M"
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function buildLeadStatusRule_(sheet, range, status, background, fontColor) {
+  return SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$H2="' + status + '"')
+    .setBackground(background)
+    .setFontColor(fontColor)
+    .setRanges([range])
+    .build();
+}
+
+function getTestLeadRowIndexes_(sheet) {
+  var lastRow = sheet.getLastRow();
+  var rowIndexes = [];
+
+  if (lastRow <= 1) {
+    return rowIndexes;
+  }
+
+  var values = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+
+  for (var i = 0; i < values.length; i += 1) {
+    if (isTestLeadRow_(values[i])) {
+      rowIndexes.push(i + 2);
+    }
+  }
+
+  return rowIndexes;
+}
+
+function getRecentNewLeadRowIndexes_(sheet, daysBack) {
+  var lastRow = sheet.getLastRow();
+  var rowIndexes = [];
+  var threshold = new Date();
+  threshold.setHours(0, 0, 0, 0);
+  threshold.setDate(threshold.getDate() - Number(daysBack || 7));
+
+  if (lastRow <= 1) {
+    return rowIndexes;
+  }
+
+  var values = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+
+  for (var i = 0; i < values.length; i += 1) {
+    var createdAt = coerceDate_(values[i][0]);
+    var status = normalizeLeadStatus_(values[i][7]);
+    if (status === "NEW" && createdAt && createdAt.getTime() >= threshold.getTime()) {
+      rowIndexes.push(i + 2);
+    }
+  }
+
+  return rowIndexes;
+}
+
+function getFollowUpLeadRowIndexes_() {
+  var leadValues = ensureLeadsSheet_().getDataRange().getValues();
+  var reportValues = ensureReportsSheet_().getDataRange().getValues();
+  var portalViewValues = ensurePortalViewsSheet_().getDataRange().getValues();
+
+  return buildFollowUpQueueItems_(leadValues, reportValues, portalViewValues)
+    .map(function(item) {
+      return item.rowIndex;
+    })
+    .filter(function(item) {
+      return !isNaN(item) && item > 1;
+    });
+}
+
+function getLeadRowIndexesByOwner_(sheet, owner) {
+  var lastRow = sheet.getLastRow();
+  var rowIndexes = [];
+  var normalizedOwner = safeString_(owner, "").trim().toLowerCase();
+
+  if (lastRow <= 1) {
+    return rowIndexes;
+  }
+
+  var values = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+
+  for (var i = 0; i < values.length; i += 1) {
+    var rowOwner = safeString_(values[i][12], "").trim().toLowerCase();
+    var effectiveOwner = rowOwner || "미지정";
+    if (effectiveOwner === normalizedOwner) {
+      rowIndexes.push(i + 2);
+    }
+  }
+
+  return rowIndexes;
+}
+
+function getLeadRowIndexesByCampus_(sheet, campusName) {
+  var lastRow = sheet.getLastRow();
+  var rowIndexes = [];
+  var normalizedCampus = safeString_(campusName, "").trim().toLowerCase();
+
+  if (lastRow <= 1) {
+    return rowIndexes;
+  }
+
+  var values = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+
+  for (var i = 0; i < values.length; i += 1) {
+    if (safeString_(values[i][5], "").trim().toLowerCase() === normalizedCampus) {
+      rowIndexes.push(i + 2);
+    }
+  }
+
+  return rowIndexes;
+}
+
+function coerceDate_(value) {
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return value;
+  }
+
+  if (!value) {
+    return null;
+  }
+
+  var parsed = new Date(value);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
+  return null;
+}
+
+function isTestLeadRow_(row) {
+  var guardianName = safeString_(row[1], "").toLowerCase();
+  var phone = safeString_(row[2], "");
+  var source = safeString_(row[6], "").toLowerCase();
+  var memo = safeString_(row[9], "").toLowerCase();
+  var owner = safeString_(row[12], "").toLowerCase();
+  var haystack = [guardianName, source, memo, owner].join(" ");
+
+  return (
+    /codex|smoke test|browserform|final verification|테스트/.test(haystack) ||
+    phone === "010-0000-0000" ||
+    phone === "010-9999-0000"
+  );
+}
+
+function deleteRowsDescending_(sheet, rowIndexes) {
+  if (!rowIndexes || !rowIndexes.length) {
+    return;
+  }
+
+  rowIndexes
+    .slice()
+    .sort(function(a, b) {
+      return b - a;
+    })
+    .forEach(function(rowIndex) {
+      sheet.deleteRow(rowIndex);
+    });
 }
 
 function normalizeLeadStatus_(status) {
