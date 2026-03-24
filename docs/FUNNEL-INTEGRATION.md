@@ -17,35 +17,21 @@
 
 ## 권장 연결 방식
 
-### 1. 가장 쉬운 방식: JSON POST
+### 1. 가장 쉬운 방식: 공통 설정 파일 + JSON POST
 
 ```js
-const ENDPOINT = 'https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec';
-
-async function submitLead(payload) {
-  const response = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-
-  return response.json();
-}
-
-submitLead({
-  parentName: '홍길동',
-  phone: '010-1234-5678',
-  grade: '초5',
-  session: '3/28(토) 11:00 설명회',
+window.READMASTER_CONFIG = {
+  endpoint: 'https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec',
   branch: 'READ MASTER 대치점',
-  source: '설명회 퍼널',
-  studentName: '홍서준',
-  email: 'parent@example.com',
-  memo: '레벨테스트 희망'
-});
+  funnelSource: '설명회 퍼널',
+  bookingSource: '상담 예약 페이지'
+};
+
+// readmaster-funnel/assets/readmaster-config.js 에 저장
 ```
+
+`readmaster-funnel`의 `funnel.html`, `book.html`은 이제 이 공통 설정 파일을 먼저 읽고 JSON POST를 시도합니다.
+JSON 요청이 막히면 hidden form POST로 한 번 더 전송해 정적 퍼널에서도 intake 누락 가능성을 줄입니다.
 
 ### 2. CORS를 덜 타는 방식: 일반 form POST
 
@@ -89,6 +75,8 @@ submitLead({
 - `curriculum.html`
   직접 POST는 없고, 리포트 및 카카오 버튼의 후속 이동 페이지로 사용
 
+운영 시에는 각 페이지에 엔드포인트를 따로 하드코딩하지 말고 `assets/readmaster-config.js` 한 파일만 수정하는 방식으로 유지합니다.
+
 권장 source 값:
 
 - `설명회 퍼널`
@@ -101,3 +89,4 @@ submitLead({
 - 지점 구분은 `branch` 값으로 처리합니다.
 - 각 가맹점별로 같은 Apps Script를 복제하거나, 같은 시트를 공유하면서 지점명으로 분기할 수 있습니다.
 - 리포트 발송 후에는 `Reports` 시트와 `Leads` 시트를 수동 또는 후속 자동화로 연결해 전환 관리하면 됩니다.
+- 배포 후 `GET ?mode=intake-guide` 응답의 `readmasterConfig` 값을 그대로 `assets/readmaster-config.js`에 옮기면 연결 실수가 줄어듭니다.

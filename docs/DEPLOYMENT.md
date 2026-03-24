@@ -24,6 +24,15 @@
 - `POST /exec` 설명회/상담 lead intake
 - `GET ?mode=intake-guide` 퍼널 연동용 샘플 payload 확인
 
+`readmaster-funnel`을 같이 운영하면 `GET ?mode=intake-guide` 응답의 `readmasterConfig.endpoint`, `branch` 값을 확인한 뒤
+`readmaster-funnel/assets/readmaster-config.js` 한 파일에만 반영합니다.
+
+현재 기본 퍼널 운영 URL은 아래 alias를 기준으로 맞춰져 있습니다.
+
+- `https://readmaster-funnel.vercel.app/funnel`
+- `https://readmaster-funnel.vercel.app/book`
+- `https://readmaster-funnel.vercel.app/curriculum`
+
 ## 3. 첫 실행
 
 1. `워크스페이스 초기화`
@@ -46,4 +55,6 @@
 - 본사 표준 템플릿 Google Docs를 만들어 `템플릿 Doc ID`로 공유
 - 웹앱 URL은 각 가맹점에서 같은 방식으로 저장
 - `readmaster-funnel`의 `funnel.html`, `book.html`, `curriculum.html` 배포 URL을 각 입력칸에 연결해 설명회 후속 상담 전환을 일원화
-- 퍼널 쪽 프론트는 JSON POST 또는 일반 form POST 둘 다 가능하게 유지
+- 퍼널 쪽 프론트는 Apps Script 웹앱일 때 일반 form POST를 우선 사용
+- 퍼널 쪽 엔드포인트는 페이지별 하드코딩 대신 `assets/readmaster-config.js` 공통 설정으로 관리
+- 배포 후 운영 점검은 [OPERATIONS-CHECKLIST.md](./OPERATIONS-CHECKLIST.md) 기준으로 반복
